@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lunch Club">
+  <link rel="apple-touch-icon" href="slc-icon.png">
+  <link rel="icon" type="image/png" href="slc-icon.png">
+  <title>Sunday Lunch Club</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #1a1410;
+      --card: #2a2118;
+      --card-hover: #342a1f;
+      --accent: #d4a24e;
+      --accent-dim: #a67c3a;
+      --accent-glow: rgba(212,162,78,0.15);
+      --text: #f0e6d6;
+      --text-muted: #9a8b78;
+      --text-dim: #6b5e50;
+      --surface: #221c15;
+      --border: #3d3228;
+      --danger: #c0503a;
+      --success: #5a9a5a;
+      --star: #d4a24e;
+      --star-empty: #4a3d30;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .serif { font-family: 'Playfair Display', Georgia, serif; }
+
+    button { font-family: 'DM Sans', sans-serif; cursor: pointer; }
+    input, select, textarea { font-family: 'DM Sans', sans-serif; }
+
+    /* Login Screen */
+    .login-screen {
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .login-brand { text-align: center; margin-bottom: 48px; }
+    .login-brand h1 {
+      font-size: 36px; font-weight: 800; color: var(--accent);
+      letter-spacing: -1px; margin-top: 8px;
+    }
+    .login-brand p { color: var(--text-muted); font-size: 15px; margin-top: 8px; }
+    .login-box {
+      background: var(--card); border-radius: 16px; padding: 32px;
+      width: 100%; max-width: 360px; border: 1px solid var(--border);
+    }
+    .login-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; text-align: center; }
+    .login-btn {
+      display: block; width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 20px; color: var(--text); font-size: 16px;
+      font-weight: 500; text-align: left; margin-bottom: 10px; transition: all 0.2s;
+    }
+    .login-btn:hover { background: var(--accent-glow); border-color: var(--accent-dim); }
+
+    /* Header */
+    .header {
+      padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border); background: var(--card);
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-title { font-size: 20px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .header-user { color: var(--text-muted); font-size: 14px; }
+    .header-switch {
+      background: none; border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text-muted); font-size: 12px; padding: 4px 10px;
+    }
+    .saving-indicator { font-size: 11px; color: var(--text-dim); margin-left: 8px; }
+
+    /* Nav */
+    .nav {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .nav-tab {
+      background: transparent; border: 1px solid transparent; border-radius: 8px;
+      padding: 8px 16px; color: var(--text-muted); font-size: 14px; font-weight: 500;
+    }
+    .nav-tab.active { background: var(--accent-glow); border-color: var(--accent-dim); color: var(--accent); }
+    .nav-add {
+      background: var(--accent); border: none; border-radius: 8px;
+      padding: 8px 16px; color: var(--bg); font-size: 14px; font-weight: 600; margin-left: 8px;
+    }
+    .nav-export {
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 16px; color: var(--text-muted); font-size: 14px; font-weight: 500;
+    }
+
+    /* Content */
+    .content { max-width: 800px; margin: 0 auto; padding: 0 16px 100px; }
+
+    /* Pub Cards */
+    .pub-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px; width: 100%; text-align: left; transition: all 0.2s; margin-bottom: 12px;
+    }
+    .pub-card:hover { background: var(--card-hover); border-color: var(--accent-dim); }
+    .pub-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .pub-name { font-size: 19px; font-weight: 700; color: var(--text); }
+    .pub-meta { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+    .pub-score { font-size: 28px; font-weight: 700; color: var(--accent); line-height: 1; text-align: right; }
+    .pub-raters { color: var(--text-dim); font-size: 11px; margin-top: 2px; }
+    .pub-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; margin-top: 4px; }
+    .pub-cat { display: flex; align-items: center; gap: 8px; }
+    .pub-cat-emoji { font-size: 18px; }
+    .pub-cat-label { font-size: 13px; color: var(--text-muted); flex: 1; }
+    .pub-cat-score { font-size: 16px; font-weight: 600; }
+    .score-good { color: var(--success); }
+    .score-mid { color: var(--accent); }
+    .score-low { color: var(--danger); }
+    .score-none { color: var(--text-dim); }
+
+    /* Upcoming */
+    .upcoming-card {
+      background: var(--accent-glow); border: 1px dashed var(--accent-dim);
+      border-radius: 14px; padding: 20px; margin-bottom: 12px;
+    }
+    .upcoming-badge {
+      background: var(--accent); color: var(--bg); font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+      margin-left: 8px; display: inline-block; vertical-align: middle;
+    }
+    .upcoming-note { color: var(--text-dim); font-size: 13px; margin-top: 10px; font-style: italic; }
+    .edit-btn {
+      background: var(--accent-glow); border: 1px solid var(--accent-dim); border-radius: 6px;
+      padding: 6px 14px; color: var(--accent); font-size: 13px; flex-shrink: 0;
+    }
+
+    /* Detail */
+    .detail-card {
+      background: var(--card); border-radius: 16px; padding: 24px;
+      border: 1px solid var(--border); margin-bottom: 20px;
+    }
+    .back-btn { background: none; border: none; color: var(--accent); font-size: 14px; padding: 0; margin-bottom: 16px; }
+    .detail-title { font-size: 28px; font-weight: 800; margin: 0; }
+    .detail-avg { font-size: 40px; font-weight: 800; color: var(--accent); line-height: 1; }
+    .score-bar-wrap { display: flex; align-items: center; gap: 10px; width: 100%; }
+    .score-bar-bg { flex: 1; height: 8px; background: var(--surface); border-radius: 4px; overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+    .score-bar-val { font-size: 14px; font-weight: 600; min-width: 32px; text-align: right; }
+
+    /* Stars */
+    .stars { display: flex; gap: 4px; align-items: center; }
+    .star-btn {
+      background: none; border: none; padding: 0; line-height: 1;
+      transition: color 0.15s, transform 0.15s;
+    }
+    .star-btn.active { transform: scale(1.1); }
+    .star-hint { font-size: 11px; color: var(--text-dim); margin-left: 4px; }
+
+    /* Member scores */
+    .member-card { background: var(--surface); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    .member-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .member-name { color: var(--text); font-size: 15px; font-weight: 500; }
+    .member-avg { color: var(--accent); font-size: 18px; font-weight: 700; }
+    .member-comment {
+      background: var(--card); border-radius: 8px; padding: 10px; margin-top: 10px;
+      font-size: 13px; color: var(--text-muted); font-style: italic;
+    }
+    .member-unrated {
+      display: flex; justify-content: space-between; align-items: center;
+      color: var(--text-muted); font-size: 14px;
+    }
+    .member-unrated span:last-child { color: var(--text-dim); font-size: 12px; }
+
+    /* My Scores */
+    .unscored-btn {
+      display: block; width: 100%; background: var(--accent-glow); border: 1px solid var(--accent-dim);
+      border-radius: 10px; padding: 12px 16px; text-align: left; color: var(--text);
+      font-size: 15px; font-weight: 500; margin-bottom: 8px;
+    }
+    .scored-btn {
+      display: flex; width: 100%; justify-content: space-between; align-items: center;
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 16px; text-align: left; margin-bottom: 8px;
+    }
+    .scored-btn:hover { border-color: var(--accent-dim); }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex;
+      align-items: center; justify-content: center; padding: 20px; z-index: 1000;
+    }
+    .modal {
+      background: var(--card); border-radius: 16px; padding: 28px; width: 100%;
+      max-width: 520px; border: 1px solid var(--border);
+    }
+    .modal h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 6px; }
+    .form-input {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px; color: var(--text); font-size: 15px;
+    }
+    .form-textarea { resize: vertical; min-height: 60px; }
+    .btn-primary {
+      background: var(--accent); border: none; border-radius: 8px;
+      padding: 12px 28px; color: var(--bg); font-size: 15px; font-weight: 600;
+    }
+    .btn-secondary {
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px 20px; color: var(--text-muted); font-size: 15px;
+    }
+    .btn-danger {
+      background: none; border: 1px solid var(--danger); border-radius: 8px;
+      padding: 12px 20px; color: var(--danger); font-size: 14px;
+    }
+    .btn-danger-confirm {
+      background: var(--danger); border: none; border-radius: 8px;
+      padding: 12px 20px; color: #fff; font-size: 14px; font-weight: 600;
+    }
+    .btn-score {
+      background: var(--accent); border: none; border-radius: 6px;
+      padding: 8px 18px; color: var(--bg); font-size: 14px; font-weight: 600;
+    }
+    .btn-edit-score {
+      background: var(--accent-glow); border: 1px solid var(--accent-dim); border-radius: 6px;
+      padding: 6px 14px; color: var(--accent); font-size: 13px;
+    }
+
+    .section-label {
+      color: var(--accent); font-size: 14px; font-weight: 600; margin-bottom: 10px;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .section-label-muted {
+      color: var(--text-muted); font-size: 14px; font-weight: 600; margin-bottom: 10px;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+
+    .empty-state { text-align: center; padding: 60px 20px; }
+    .empty-state h2 { color: var(--accent); margin: 0 0 8px; }
+    .empty-state p { color: var(--text-muted); font-size: 15px; }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+<script>
+// Firebase config
+firebase.initializeApp({
+  apiKey: "AIzaSyCwJ1txipOPHG0KkhKAoRK3jXToPS08yZ8",
+  authDomain: "sunday-lunch-club.firebaseapp.com",
+  databaseURL: "https://sunday-lunch-club-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "sunday-lunch-club",
+  storageBucket: "sunday-lunch-club.firebasestorage.app",
+  messagingSenderId: "552141902707",
+  appId: "1:552141902707:web:259e2e9eca4b0e48e5ab06"
+});
+
+const db = firebase.database();
+
+// Constants
+const MEMBERS = ["Nick", "Denise", "Liz", "Martin", "Kerrie", "Kevin"];
+const CATEGORIES = [
+  { key: "roast_quality", label: "Roast/Meal Quality", emoji: "🍖", desc: "Meat, veg, trimmings, gravy, Yorkshires" },
+  { key: "hero_quantity", label: "Meat/Hero Quantity", emoji: "🥩", desc: "Generous portions? Enough to satisfy?" },
+  { key: "allergy_options", label: "Allergy Options & Quality", emoji: "🌿", desc: "Range and quality of dietary alternatives" },
+  { key: "drinks", label: "Drinks & Beer Selection", emoji: "🍺", desc: "Range, quality, well-kept?" },
+  { key: "atmosphere", label: "Atmosphere & Setting", emoji: "✨", desc: "Ambience, décor, comfort" },
+  { key: "service", label: "Service", emoji: "🤝", desc: "Friendly, attentive, efficient?" },
+];
+
+// State
+const urlParams = new URLSearchParams(window.location.search);
+const urlUser = MEMBERS.find((m) => m.toLowerCase() === (urlParams.get("user") || "").toLowerCase());
+const isAdmin = urlParams.get("admin") === "true";
+
+let state = {
+  currentUser: urlUser || localStorage.getItem("slc-user") || null,
+  pubs: {},
+  scores: {},
+  view: "leaderboard",
+  selectedPubId: null,
+  editing: false,
+  draft: {},
+  draftComment: "",
+  modal: null, // "add-pub", "edit-pub", "export"
+  editPubData: null,
+  confirmDelete: false,
+};
+
+// If URL had a valid user, save it
+if (urlUser) localStorage.setItem("slc-user", urlUser);
+
+// Verify stored user is still valid
+if (state.currentUser && !MEMBERS.includes(state.currentUser)) {
+  state.currentUser = null;
+  localStorage.removeItem("slc-user");
+}
+
+// Firebase listeners
+db.ref("pubs").on("value", (snap) => {
+  state.pubs = snap.val() || {};
+  render();
+});
+
+db.ref("scores").on("value", (snap) => {
+  state.scores = snap.val() || {};
+  render();
+});
+
+// Helpers
+function today() { return new Date().toISOString().split("T")[0]; }
+
+function pubList() {
+  return Object.entries(state.pubs).map(([id, pub]) => ({ id, ...pub }));
+}
+
+function getPubAverage(pubId) {
+  const pubScores = Object.entries(state.scores)
+    .filter(([key]) => key.startsWith(pubId + ":"))
+    .map(([, val]) => val);
+  if (pubScores.length === 0) return null;
+  let sum = 0, count = 0;
+  pubScores.forEach((ms) => {
+    CATEGORIES.forEach((cat) => { if (ms[cat.key]) { sum += ms[cat.key]; count++; } });
+  });
+  return count > 0 ? sum / count : null;
+}
+
+function getCatAverage(pubId, catKey) {
+  const pubScores = Object.entries(state.scores)
+    .filter(([key]) => key.startsWith(pubId + ":"))
+    .map(([, val]) => val);
+  let sum = 0, count = 0;
+  pubScores.forEach((s) => { if (s[catKey]) { sum += s[catKey]; count++; } });
+  return count > 0 ? sum / count : null;
+}
+
+function getRaters(pubId) {
+  return MEMBERS.filter((m) => state.scores[pubId + ":" + m]);
+}
+
+function isFuture(pub) { return pub.date && pub.date > today(); }
+
+function scoreColor(val) {
+  if (!val) return "score-none";
+  return val >= 4 ? "score-good" : val >= 3 ? "score-mid" : "score-low";
+}
+
+function formatDate(dateStr, long) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  if (long) return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatDateWeekday(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
+}
+
+// Actions
+function login(name) {
+  state.currentUser = name;
+  localStorage.setItem("slc-user", name);
+  render();
+}
+
+function logout() {
+  state.currentUser = null;
+  localStorage.removeItem("slc-user");
+  render();
+}
+
+function setView(v, pubId) {
+  state.view = v;
+  state.selectedPubId = pubId || null;
+  state.editing = false;
+  state.draft = {};
+  state.draftComment = "";
+  render();
+}
+
+function openModal(type, data) {
+  state.modal = type;
+  state.editPubData = data || null;
+  state.confirmDelete = false;
+  render();
+}
+
+function closeModal() {
+  state.modal = null;
+  state.editPubData = null;
+  state.confirmDelete = false;
+  render();
+}
+
+function savePub(pubData) {
+  const id = pubData.id || db.ref("pubs").push().key;
+  db.ref("pubs/" + id).set({
+    name: pubData.name || "TBD",
+    area: pubData.area || "",
+    date: pubData.date || "",
+    chosenBy: pubData.chosenBy || "",
+  });
+  closeModal();
+}
+
+function deletePub(pubId) {
+  db.ref("pubs/" + pubId).remove();
+  // Also remove scores for this pub
+  Object.keys(state.scores).forEach((key) => {
+    if (key.startsWith(pubId + ":")) db.ref("scores/" + key).remove();
+  });
+  closeModal();
+}
+
+function startEditing() {
+  const pubId = state.selectedPubId;
+  const existing = state.scores[pubId + ":" + state.currentUser] || {};
+  state.draft = {};
+  CATEGORIES.forEach((c) => { if (existing[c.key]) state.draft[c.key] = existing[c.key]; });
+  state.draftComment = existing._comment || "";
+  state.editing = true;
+  render();
+}
+
+function setDraftScore(catKey, val) {
+  if (state.draft[catKey] === val) { delete state.draft[catKey]; }
+  else { state.draft[catKey] = val; }
+  render();
+}
+
+function saveScores() {
+  const pubId = state.selectedPubId;
+  const data = {};
+  CATEGORIES.forEach((c) => { if (state.draft[c.key]) data[c.key] = state.draft[c.key]; });
+  if (state.draftComment.trim()) data._comment = state.draftComment.trim();
+  db.ref("scores/" + pubId + ":" + state.currentUser).set(data);
+  state.editing = false;
+  render();
+}
+
+function cancelEditing() {
+  state.editing = false;
+  render();
+}
+
+// CSV Export
+function generateCSV() {
+  const headers = ["Pub", "Area", "Date", "Chosen By", "Member",
+    ...CATEGORIES.map((c) => c.label), "Notes"];
+  const rows = [];
+  pubList().forEach((pub) => {
+    MEMBERS.forEach((member) => {
+      const ms = state.scores[pub.id + ":" + member];
+      if (ms) {
+        rows.push([pub.name, pub.area, pub.date, pub.chosenBy, member,
+          ...CATEGORIES.map((c) => ms[c.key] || ""), ms._comment || ""]);
+      }
+    });
+  });
+  return [headers, ...rows]
+    .map((row) => row.map((cell) => '"' + String(cell).replace(/"/g, '""') + '"').join(","))
+    .join("\n");
+}
+
+// Render
+function render() {
+  const app = document.getElementById("app");
+  
+  if (!state.currentUser) {
+    app.innerHTML = renderLogin();
+  } else if (state.view === "leaderboard") {
+    app.innerHTML = renderHeader() + renderNav() + '<div class="content">' + renderLeaderboard() + '</div>';
+  } else if (state.view === "pub-detail" && state.selectedPubId) {
+    app.innerHTML = renderHeader() + renderNav() + '<div class="content">' + renderPubDetail() + '</div>';
+  } else if (state.view === "my-scores") {
+    app.innerHTML = renderHeader() + renderNav() + '<div class="content">' + renderMyScores() + '</div>';
+  }
+
+  if (state.modal) {
+    app.innerHTML += renderModal();
+  }
+
+  bindEvents();
+}
+
+function renderLogin() {
+  return `
+    <div class="login-screen">
+      <div class="login-brand">
+        <div style="font-size:48px">🍽️</div>
+        <h1 class="serif">Sunday Lunch Club</h1>
+        <p>Rate the roasts. Rank the pubs. Settle the debates.</p>
+      </div>
+      <div class="login-box">
+        <p>Who's scoring today?</p>
+        ${MEMBERS.map((m) => `<button class="login-btn" data-login="${m}">${m}</button>`).join("")}
+      </div>
+    </div>`;
+}
+
+function renderHeader() {
+  return `
+    <div class="header">
+      <div class="header-left">
+        <span style="font-size:24px">🍽️</span>
+        <span class="header-title serif">Sunday Lunch Club</span>
+      </div>
+      <div class="header-right">
+        <span class="header-user">${state.currentUser}</span>
+        ${isAdmin ? '<span style="background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">ADMIN</span>' : ''}
+        <button class="header-switch" data-action="logout">Switch</button>
+      </div>
+    </div>`;
+}
+
+function renderNav() {
+  const tabs = [
+    { key: "leaderboard", label: "🏆 Leaderboard" },
+    { key: "my-scores", label: "📝 My Scores" },
+  ];
+  return `
+    <div class="nav">
+      ${tabs.map((t) => `<button class="nav-tab ${state.view === t.key ? 'active' : ''}" data-nav="${t.key}">${t.label}</button>`).join("")}
+      <button class="nav-add" data-action="add-pub">+ Add Pub</button>
+      <button class="nav-export" data-action="export">📥 Export</button>
+    </div>`;
+}
+
+function renderLeaderboard() {
+  const pubs = pubList();
+  const futurePubs = pubs.filter(isFuture).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const pastPubs = pubs.filter((p) => !isFuture(p)).sort((a, b) => (getPubAverage(b.id) ?? -1) - (getPubAverage(a.id) ?? -1));
+
+  if (pubs.length === 0) {
+    return `<div class="empty-state"><div style="font-size:48px;margin-bottom:16px">🍺</div>
+      <h2 class="serif">No pubs yet</h2><p>Add your first pub visit to get started.</p></div>`;
+  }
+
+  let html = '<div style="padding-top:20px">';
+
+  if (futurePubs.length > 0) {
+    html += `<h2 class="serif" style="font-size:20px;font-weight:700;margin:0 0 14px">📅 Coming Up</h2>`;
+    futurePubs.forEach((pub) => {
+      html += `
+        <div class="upcoming-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <span class="serif" style="font-size:19px;font-weight:700">${pub.name || "TBD"}</span>
+              <span class="upcoming-badge">Upcoming</span>
+              <div class="pub-meta">
+                ${pub.area ? pub.area : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDateWeekday(pub.date) : ""}${pub.chosenBy ? " · Chosen by " + pub.chosenBy : ""}
+              </div>
+            </div>
+            <button class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}">Edit</button>
+          </div>
+          <div class="upcoming-note">Scoring opens on the day</div>
+        </div>`;
+    });
+    html += '<div style="margin-bottom:28px"></div>';
+  }
+
+  html += `<h2 class="serif" style="font-size:24px;font-weight:700;margin:0 0 20px">🏆 Pub Rankings</h2>`;
+
+  if (pastPubs.length === 0) {
+    html += `<p style="color:var(--text-muted);font-size:14px">No scored pubs yet.</p>`;
+  }
+
+  pastPubs.forEach((pub, idx) => {
+    const avg = getPubAverage(pub.id);
+    const raters = getRaters(pub.id);
+    const medal = idx === 0 && avg ? "🥇" : idx === 1 && avg ? "🥈" : idx === 2 && avg ? "🥉" : "";
+
+    html += `
+      <button class="pub-card" data-action="view-pub" data-pub-id="${pub.id}">
+        <div class="pub-card-top">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px">
+              ${medal ? `<span style="font-size:22px">${medal}</span>` : ""}
+              <span class="serif pub-name">${pub.name}</span>
+              ${isAdmin ? `<span class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}" style="font-size:11px;padding:2px 8px">✏️ Edit</span>` : ""}
+            </div>
+            <div class="pub-meta">
+              ${pub.area ? pub.area : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDate(pub.date) : ""}${pub.chosenBy ? " · Chosen by " + pub.chosenBy : ""}
+            </div>
+          </div>
+          <div style="text-align:right">
+            ${avg ? `<div class="serif pub-score">${avg.toFixed(1)}</div>` : '<span style="color:var(--text-dim);font-size:13px">Unrated</span>'}
+            <div class="pub-raters">${raters.length > 0 ? raters.join(", ") : "No ratings yet"}</div>
+          </div>
+        </div>
+        ${avg ? `<div class="pub-cats">${CATEGORIES.map((cat) => {
+          const v = getCatAverage(pub.id, cat.key);
+          return `<div class="pub-cat"><span class="pub-cat-emoji">${cat.emoji}</span><span class="pub-cat-label">${cat.label}</span><span class="pub-cat-score ${scoreColor(v)}">${v ? v.toFixed(1) : "—"}</span></div>`;
+        }).join("")}</div>` : ""}
+      </button>`;
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function renderPubDetail() {
+  const pub = { id: state.selectedPubId, ...state.pubs[state.selectedPubId] };
+  if (!pub) return "";
+  const avg = getPubAverage(pub.id);
+  const raters = getRaters(pub.id);
+  const future = isFuture(pub);
+  const myScores = state.scores[pub.id + ":" + state.currentUser] || {};
+  const hasMyScores = Object.keys(myScores).filter(k => k !== "_comment").length > 0;
+
+  let html = '<div style="padding-top:20px">';
+  html += `<button class="back-btn" data-action="back">← Back to Leaderboard</button>`;
+
+  // Pub info
+  html += `<div class="detail-card">
+    <h1 class="serif detail-title">${pub.name}</h1>
+    <div class="pub-meta" style="margin-top:6px">
+      ${pub.area ? pub.area : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDate(pub.date, true) : ""}${pub.chosenBy ? " · Chosen by " + pub.chosenBy : ""}
+    </div>`;
+
+  if (avg) {
+    html += `<div style="margin-top:20px">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:16px">
+        <span class="serif detail-avg">${avg.toFixed(1)}</span>
+        <span style="color:var(--text-muted);font-size:14px">/ 5 overall · ${raters.join(", ")}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${CATEGORIES.map((cat) => {
+          const v = getCatAverage(pub.id, cat.key);
+          const pct = v ? (v / 5) * 100 : 0;
+          const col = !v ? "var(--text-dim)" : v >= 4 ? "var(--success)" : v >= 3 ? "var(--accent)" : "var(--danger)";
+          return `<div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:16px;width:24px;text-align:center">${cat.emoji}</span>
+            <span style="font-size:13px;color:var(--text-muted);width:160px;flex-shrink:0">${cat.label}</span>
+            <div style="flex:1">
+              ${v ? `<div class="score-bar-wrap">
+                <div class="score-bar-bg"><div class="score-bar-fill" style="width:${pct}%;background:${col}"></div></div>
+                <span class="score-bar-val" style="color:${col}">${v.toFixed(1)}</span>
+              </div>` : `<span style="color:var(--text-dim);font-size:13px">No scores yet</span>`}
+            </div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  // My scores
+  html += `<div class="detail-card" style="border-color:${state.editing ? 'var(--accent-dim)' : 'var(--border)'}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 class="serif" style="font-size:18px;font-weight:700;margin:0">
+        ${future ? "Scoring Not Yet Open" : hasMyScores ? "My Scores" : "Rate This Pub"}
+      </h3>`;
+
+  if (!future && hasMyScores && !state.editing) {
+    html += `<button class="btn-edit-score" data-action="start-edit">Edit</button>`;
+  }
+  if (!future && !hasMyScores && !state.editing) {
+    html += `<button class="btn-score" data-action="start-edit">Score Now</button>`;
+  }
+  html += `</div>`;
+
+  if (future) {
+    html += `<div style="color:var(--text-dim);font-size:14px;font-style:italic">
+      Scoring opens on ${formatDate(pub.date, true)}. Enjoy the lunch first!</div>`;
+  }
+
+  if (!future && (state.editing || hasMyScores)) {
+    html += `<div style="display:flex;flex-direction:column;gap:14px">`;
+    CATEGORIES.forEach((cat) => {
+      const val = state.editing ? (state.draft[cat.key] || 0) : (myScores[cat.key] || 0);
+      html += `<div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <span style="font-size:14px">${cat.emoji} ${cat.label}</span>
+          ${state.editing ? `<div style="font-size:11px;color:var(--text-dim);margin-top:1px">${cat.desc}</div>` : ""}
+        </div>
+        <div class="stars">
+          ${[1,2,3,4,5].map((s) => `<button class="star-btn ${s <= val ? 'active' : ''}" 
+            style="font-size:${state.editing ? 26 : 22}px;color:${s <= val ? 'var(--star)' : 'var(--star-empty)'};${!state.editing ? 'cursor:default' : ''}"
+            ${state.editing ? `data-action="set-star" data-cat="${cat.key}" data-val="${s}"` : ""}
+          >★</button>`).join("")}
+          ${state.editing && !val ? '<span class="star-hint">skip if n/a</span>' : ""}
+        </div>
+      </div>`;
+    });
+
+    if (state.editing) {
+      html += `<div style="margin-top:4px">
+        <label class="form-label">Notes (optional)</label>
+        <textarea class="form-input form-textarea" id="score-comment" placeholder="Best roast potatoes ever, dodgy gravy...">${state.draftComment}</textarea>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn-primary" data-action="save-scores">Save Scores</button>
+        <button class="btn-secondary" data-action="cancel-edit">Cancel</button>
+      </div>`;
+    } else if (myScores._comment) {
+      html += `<div class="member-comment">"${myScores._comment}"</div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  // Everyone's scores
+  html += `<div class="detail-card">
+    <h3 class="serif" style="font-size:18px;font-weight:700;margin:0 0 16px">Everyone's Scores</h3>`;
+
+  MEMBERS.forEach((m) => {
+    const ms = state.scores[pub.id + ":" + m];
+    if (!ms) {
+      html += `<div class="member-card"><div class="member-unrated"><span>${m}</span><span>Not yet rated</span></div></div>`;
+      return;
+    }
+    const mAvg = CATEGORIES.reduce((sum, c) => sum + (ms[c.key] || 0), 0) / CATEGORIES.filter(c => ms[c.key]).length;
+    html += `<div class="member-card">
+      <div class="member-top">
+        <span class="member-name">${m}</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="member-avg serif">${mAvg.toFixed(1)}</span>
+          ${isAdmin ? `<button class="btn-danger" style="padding:4px 10px;font-size:11px" data-action="delete-score" data-score-key="${pub.id}:${m}">Remove</button>` : ""}
+        </div>
+      </div>
+      <div class="pub-cats">
+        ${CATEGORIES.map((cat) => {
+          const v = ms[cat.key];
+          return `<div class="pub-cat"><span class="pub-cat-emoji">${cat.emoji}</span><span class="pub-cat-label">${cat.label}</span><span class="pub-cat-score ${scoreColor(v)}">${v || "—"}</span></div>`;
+        }).join("")}
+      </div>
+      ${ms._comment ? `<div class="member-comment">"${ms._comment}"</div>` : ""}
+    </div>`;
+  });
+
+  html += `</div></div>`;
+  return html;
+}
+
+function renderMyScores() {
+  const pubs = pubList().filter((p) => !isFuture(p));
+  const scored = pubs.filter((p) => state.scores[p.id + ":" + state.currentUser]);
+  const unscored = pubs.filter((p) => !state.scores[p.id + ":" + state.currentUser]);
+
+  let html = '<div style="padding-top:20px">';
+  html += `<h2 class="serif" style="font-size:24px;font-weight:700;margin:0 0 20px">📝 My Scores</h2>`;
+
+  if (unscored.length > 0) {
+    html += `<div style="margin-bottom:24px"><div class="section-label">Needs your scores</div>`;
+    unscored.forEach((pub) => {
+      html += `<button class="unscored-btn" data-action="view-pub" data-pub-id="${pub.id}">${pub.name} <span style="color:var(--accent);font-size:13px">→ Rate now</span></button>`;
+    });
+    html += `</div>`;
+  }
+
+  if (scored.length > 0) {
+    html += `<div><div class="section-label-muted">Scored</div>`;
+    scored.forEach((pub) => {
+      const ms = state.scores[pub.id + ":" + state.currentUser];
+      const mAvg = CATEGORIES.reduce((sum, c) => sum + (ms[c.key] || 0), 0) / CATEGORIES.filter(c => ms[c.key]).length;
+      html += `<button class="scored-btn" data-action="view-pub" data-pub-id="${pub.id}">
+        <span style="color:var(--text);font-size:15px">${pub.name}</span>
+        <span style="color:var(--accent);font-weight:700" class="serif">${mAvg.toFixed(1)}</span>
+      </button>`;
+    });
+    html += `</div>`;
+  }
+
+  if (scored.length === 0 && unscored.length === 0) {
+    html += `<div style="text-align:center;padding:40px 20px;color:var(--text-muted)">No pub visits yet. Add one to get started!</div>`;
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function renderModal() {
+  if (state.modal === "add-pub") {
+    return `<div class="modal-overlay" data-action="close-modal">
+      <div class="modal" onclick="event.stopPropagation()">
+        <h2 class="serif">Add Pub Visit</h2>
+        <div class="form-group"><label class="form-label">Pub Name</label><input class="form-input" id="pub-name" placeholder="e.g. The Crown & Anchor"></div>
+        <div class="form-group"><label class="form-label">Area / Location</label><input class="form-input" id="pub-area" placeholder="e.g. Chiswick, West London"></div>
+        <div class="form-group"><label class="form-label">Date of Visit</label><input type="date" class="form-input" id="pub-date" value="${today()}"></div>
+        <div class="form-group"><label class="form-label">Chosen by</label><select class="form-input" id="pub-chosen">
+          ${MEMBERS.map((m) => `<option value="${m}" ${m === state.currentUser ? "selected" : ""}>${m}</option>`).join("")}
+        </select></div>
+        <div style="display:flex;gap:10px;margin-top:24px">
+          <button class="btn-primary" data-action="save-new-pub">Add Pub</button>
+          <button class="btn-secondary" data-action="close-modal">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  if (state.modal === "edit-pub" && state.editPubData) {
+    const pub = state.editPubData;
+    return `<div class="modal-overlay" data-action="close-modal">
+      <div class="modal" onclick="event.stopPropagation()">
+        <h2 class="serif">Edit Pub Details</h2>
+        <div class="form-group"><label class="form-label">Pub Name</label><input class="form-input" id="edit-name" value="${pub.name || ""}" placeholder="TBD - fill in when decided"></div>
+        <div class="form-group"><label class="form-label">Area / Location</label><input class="form-input" id="edit-area" value="${pub.area || ""}" placeholder="TBD"></div>
+        <div class="form-group"><label class="form-label">Date of Visit</label><input type="date" class="form-input" id="edit-date" value="${pub.date || ""}"></div>
+        <div class="form-group"><label class="form-label">Chosen by</label><select class="form-input" id="edit-chosen">
+          ${MEMBERS.map((m) => `<option value="${m}" ${m === pub.chosenBy ? "selected" : ""}>${m}</option>`).join("")}
+        </select></div>
+        <div style="display:flex;gap:10px;margin-top:24px;flex-wrap:wrap">
+          <button class="btn-primary" data-action="save-edit-pub">Save</button>
+          <button class="btn-secondary" data-action="close-modal">Cancel</button>
+          <div style="flex:1"></div>
+          ${state.confirmDelete
+            ? `<button class="btn-danger-confirm" data-action="confirm-delete-pub">Confirm Delete</button>`
+            : `<button class="btn-danger" data-action="delete-pub">Delete</button>`}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  if (state.modal === "export") {
+    const csv = generateCSV();
+    return `<div class="modal-overlay" data-action="close-modal">
+      <div class="modal" onclick="event.stopPropagation()">
+        <h2 class="serif">📥 Export / Import Data</h2>
+        
+        <div style="margin-bottom:24px">
+          <h3 style="font-size:15px;color:var(--accent);margin:0 0 8px">Export</h3>
+          <p style="color:var(--text-muted);font-size:13px;margin:0 0 10px">Copy this CSV data and paste it into Excel or Google Sheets.</p>
+          <textarea class="form-input form-textarea" id="csv-area" readonly style="height:160px;font-family:monospace;font-size:12px">${csv}</textarea>
+          <div style="margin-top:10px">
+            <button class="btn-primary" data-action="copy-csv">Copy to Clipboard</button>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);padding-top:20px">
+          <h3 style="font-size:15px;color:var(--accent);margin:0 0 8px">Import</h3>
+          <p style="color:var(--text-muted);font-size:13px;margin:0 0 10px">Paste previously exported CSV data to restore scores. This will merge with existing data (not overwrite).</p>
+          <textarea class="form-input form-textarea" id="csv-import" style="height:120px;font-family:monospace;font-size:12px" placeholder="Paste CSV data here..."></textarea>
+          <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+            <button class="btn-secondary" data-action="import-csv" style="border-color:var(--accent);color:var(--accent)">Import Data</button>
+            <span id="import-status" style="font-size:13px;color:var(--text-dim)"></span>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;text-align:right">
+          <button class="btn-secondary" data-action="close-modal">Close</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  return "";
+}
+
+// Event binding
+function bindEvents() {
+  document.querySelectorAll("[data-login]").forEach((btn) => {
+    btn.onclick = () => login(btn.dataset.login);
+  });
+
+  document.querySelectorAll("[data-nav]").forEach((btn) => {
+    btn.onclick = () => setView(btn.dataset.nav);
+  });
+
+  document.querySelectorAll("[data-action]").forEach((btn) => {
+    btn.onclick = (e) => {
+      const action = btn.dataset.action;
+      
+      if (action === "logout") logout();
+      if (action === "add-pub") openModal("add-pub");
+      if (action === "export") openModal("export");
+      if (action === "close-modal") closeModal();
+      
+      if (action === "view-pub") setView("pub-detail", btn.dataset.pubId);
+      if (action === "back") setView("leaderboard");
+
+      if (action === "edit-pub") {
+        e.stopPropagation();
+        const pub = { id: btn.dataset.pubId, ...state.pubs[btn.dataset.pubId] };
+        openModal("edit-pub", pub);
+      }
+
+      if (action === "delete-score") {
+        e.stopPropagation();
+        const key = btn.dataset.scoreKey;
+        if (btn.textContent === "Confirm?") {
+          db.ref("scores/" + key).remove();
+        } else {
+          btn.textContent = "Confirm?";
+          btn.style.background = "var(--danger)";
+          btn.style.color = "#fff";
+          setTimeout(() => { btn.textContent = "Remove"; btn.style.background = "none"; btn.style.color = "var(--danger)"; }, 3000);
+        }
+      }
+
+      if (action === "save-new-pub") {
+        savePub({
+          name: document.getElementById("pub-name").value.trim(),
+          area: document.getElementById("pub-area").value.trim(),
+          date: document.getElementById("pub-date").value,
+          chosenBy: document.getElementById("pub-chosen").value,
+        });
+      }
+
+      if (action === "save-edit-pub") {
+        savePub({
+          id: state.editPubData.id,
+          name: document.getElementById("edit-name").value.trim(),
+          area: document.getElementById("edit-area").value.trim(),
+          date: document.getElementById("edit-date").value,
+          chosenBy: document.getElementById("edit-chosen").value,
+        });
+      }
+
+      if (action === "delete-pub") { state.confirmDelete = true; render(); }
+      if (action === "confirm-delete-pub") deletePub(state.editPubData.id);
+
+      if (action === "start-edit") startEditing();
+      if (action === "cancel-edit") cancelEditing();
+      if (action === "save-scores") {
+        const commentEl = document.getElementById("score-comment");
+        if (commentEl) state.draftComment = commentEl.value;
+        saveScores();
+      }
+
+      if (action === "set-star") {
+        setDraftScore(btn.dataset.cat, parseInt(btn.dataset.val));
+      }
+
+      if (action === "copy-csv") {
+        const area = document.getElementById("csv-area");
+        navigator.clipboard.writeText(area.value).then(() => {
+          btn.textContent = "✓ Copied!";
+          btn.style.background = "var(--success)";
+          setTimeout(() => { btn.textContent = "Copy to Clipboard"; btn.style.background = "var(--accent)"; }, 2000);
+        }).catch(() => {
+          area.select();
+          document.execCommand("copy");
+          btn.textContent = "✓ Copied!";
+          setTimeout(() => { btn.textContent = "Copy to Clipboard"; }, 2000);
+        });
+      }
+
+      if (action === "import-csv") {
+        const raw = document.getElementById("csv-import").value.trim();
+        const status = document.getElementById("import-status");
+        if (!raw) { status.textContent = "Paste CSV data first"; status.style.color = "var(--danger)"; return; }
+
+        try {
+          // Parse CSV
+          const lines = raw.split("\n").map((line) => {
+            const matches = [];
+            const regex = /"([^"]*(?:""[^"]*)*)"/g;
+            let m;
+            while ((m = regex.exec(line)) !== null) matches.push(m[1].replace(/""/g, '"'));
+            return matches;
+          });
+
+          const headers = lines[0];
+          if (!headers || headers.length < 6) throw new Error("Invalid CSV format");
+
+          let pubCount = 0, scoreCount = 0;
+
+          for (let i = 1; i < lines.length; i++) {
+            const row = lines[i];
+            if (row.length < 6) continue;
+
+            const pubName = row[0], area = row[1], date = row[2], chosenBy = row[3], member = row[4];
+            if (!member || !MEMBERS.includes(member)) continue;
+
+            // Find or create pub
+            let pubId = null;
+            Object.entries(state.pubs).forEach(([id, p]) => {
+              if (p.name === pubName && p.date === date) pubId = id;
+            });
+
+            if (!pubId) {
+              pubId = db.ref("pubs").push().key;
+              db.ref("pubs/" + pubId).set({ name: pubName, area: area, date: date, chosenBy: chosenBy });
+              pubCount++;
+            }
+
+            // Build scores
+            const scoreData = {};
+            CATEGORIES.forEach((cat, idx) => {
+              const val = parseFloat(row[5 + idx]);
+              if (val && val >= 1 && val <= 5) scoreData[cat.key] = val;
+            });
+            const notes = row[5 + CATEGORIES.length];
+            if (notes) scoreData._comment = notes;
+
+            if (Object.keys(scoreData).filter(k => k !== "_comment").length > 0) {
+              db.ref("scores/" + pubId + ":" + member).set(scoreData);
+              scoreCount++;
+            }
+          }
+
+          status.textContent = "✓ Imported " + pubCount + " new pubs, " + scoreCount + " scores";
+          status.style.color = "var(--success)";
+          document.getElementById("csv-import").value = "";
+        } catch (err) {
+          status.textContent = "Error: " + err.message;
+          status.style.color = "var(--danger)";
+        }
+      }
+    };
+  });
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>
