@@ -247,6 +247,16 @@
     .empty-state p { color: var(--text-muted); font-size: 15px; }
 
     .hidden { display: none; }
+
+    /* Install banner */
+    .install-banner {
+      background: var(--card); border: 1px solid var(--accent-dim); border-radius: 12px;
+      padding: 16px; margin: 16px; display: flex; align-items: flex-start; gap: 12px;
+    }
+    .install-banner-close {
+      background: none; border: none; color: var(--text-dim); font-size: 20px;
+      padding: 0; line-height: 1; flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -290,6 +300,7 @@ let state = {
   currentUser: urlUser || localStorage.getItem("slc-user") || null,
   pubs: {},
   scores: {},
+  loaded: false,
   view: "leaderboard",
   selectedPubId: null,
   editing: false,
@@ -310,17 +321,28 @@ if (state.currentUser && !MEMBERS.includes(state.currentUser)) {
 }
 
 // Firebase listeners
+let _pubsLoaded = false, _scoresLoaded = false;
 db.ref("pubs").on("value", (snap) => {
   state.pubs = snap.val() || {};
+  _pubsLoaded = true;
+  if (_scoresLoaded) state.loaded = true;
   render();
 });
 
 db.ref("scores").on("value", (snap) => {
   state.scores = snap.val() || {};
+  _scoresLoaded = true;
+  if (_pubsLoaded) state.loaded = true;
   render();
 });
 
 // Helpers
+function esc(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
 function today() { return new Date().toISOString().split("T")[0]; }
 
 function pubList() {
@@ -364,6 +386,14 @@ function formatDate(dateStr, long) {
   const d = new Date(dateStr + "T00:00:00");
   if (long) return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatTime(timeStr) {
+  if (!timeStr) return "";
+  const [h, m] = timeStr.split(":").map(Number);
+  const suffix = h >= 12 ? "pm" : "am";
+  const h12 = h % 12 || 12;
+  return m === 0 ? `${h12} ${suffix}` : `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
 function formatDateWeekday(dateStr) {
@@ -414,6 +444,7 @@ function savePub(pubData) {
     name: pubData.name || "TBD",
     area: pubData.area || "",
     date: pubData.date || "",
+    time: pubData.time || "",
     chosenBy: pubData.chosenBy || "",
   });
   closeModal();
@@ -478,12 +509,34 @@ function generateCSV() {
     .join("\n");
 }
 
+// Install banner
+const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+const installDismissed = localStorage.getItem("slc-install-dismissed");
+const showInstallBanner = !isStandalone && !installDismissed && /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+function renderInstallBanner() {
+  if (!showInstallBanner) return "";
+  return `<div class="install-banner" id="install-banner">
+    <div style="font-size:28px;flex-shrink:0">📲</div>
+    <div style="flex:1">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Add to Home Screen</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.4">
+        Tap <span style="font-size:16px;vertical-align:middle">⎋</span> (Share) then <strong>Add to Home Screen</strong> for the full app experience.
+      </div>
+    </div>
+    <button class="install-banner-close" data-action="dismiss-install">✕</button>
+  </div>`;
+}
+
 // Render
 function render() {
   const app = document.getElementById("app");
-  
+
   if (!state.currentUser) {
-    app.innerHTML = renderLogin();
+    app.innerHTML = renderLogin() + renderInstallBanner();
+  } else if (!state.loaded) {
+    app.innerHTML = renderHeader() + '<div style="text-align:center;padding:80px 20px;color:var(--text-muted)"><div style="font-size:32px;margin-bottom:12px">🍽️</div>Loading...</div>';
+    return;
   } else if (state.view === "leaderboard") {
     app.innerHTML = renderHeader() + renderNav() + '<div class="content">' + renderLeaderboard() + '</div>';
   } else if (state.view === "pub-detail" && state.selectedPubId) {
@@ -509,7 +562,7 @@ function renderLogin() {
       </div>
       <div class="login-box">
         <p>Who's scoring today?</p>
-        ${MEMBERS.map((m) => `<button class="login-btn" data-login="${m}">${m}</button>`).join("")}
+        ${MEMBERS.map((m) => `<button class="login-btn" data-login="${esc(m)}">${esc(m)}</button>`).join("")}
       </div>
     </div>`;
 }
@@ -522,7 +575,7 @@ function renderHeader() {
         <span class="header-title serif">Sunday Lunch Club</span>
       </div>
       <div class="header-right">
-        <span class="header-user">${state.currentUser}</span>
+        <span class="header-user">${esc(state.currentUser)}</span>
         ${isAdmin ? '<span style="background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">ADMIN</span>' : ''}
         <button class="header-switch" data-action="logout">Switch</button>
       </div>
@@ -561,15 +614,19 @@ function renderLeaderboard() {
         <div class="upcoming-card">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div>
-              <span class="serif" style="font-size:19px;font-weight:700">${pub.name || "TBD"}</span>
+              <span class="serif" style="font-size:19px;font-weight:700">${esc(pub.name || "TBD")}</span>
               <span class="upcoming-badge">Upcoming</span>
               <div class="pub-meta">
-                ${pub.area ? pub.area : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDateWeekday(pub.date) : ""}${pub.chosenBy ? " · Chosen by " + pub.chosenBy : ""}
+                ${pub.area ? esc(pub.area) : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDateWeekday(pub.date) : ""}${pub.chosenBy ? " · Chosen by " + esc(pub.chosenBy) : ""}
               </div>
             </div>
             <button class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}">Edit</button>
           </div>
-          <div class="upcoming-note">Scoring opens on the day</div>
+          ${pub.time ? `<div style="margin-top:8px;color:var(--accent);font-size:15px;font-weight:600">🕐 Booked for ${esc(formatTime(pub.time))}</div>` : ""}
+          <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+            <span class="upcoming-note" style="margin:0">Scoring opens on the day</span>
+            ${pub.name && pub.name !== "TBD" ? `<a href="https://maps.apple.com/?q=${encodeURIComponent((pub.name || "") + " " + (pub.area || ""))}" target="_blank" rel="noopener" class="edit-btn" style="text-decoration:none;font-size:13px">📍 Directions</a>` : ""}
+          </div>
         </div>`;
     });
     html += '<div style="margin-bottom:28px"></div>';
@@ -592,16 +649,16 @@ function renderLeaderboard() {
           <div>
             <div style="display:flex;align-items:center;gap:8px">
               ${medal ? `<span style="font-size:22px">${medal}</span>` : ""}
-              <span class="serif pub-name">${pub.name}</span>
-              ${isAdmin ? `<span class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}" style="font-size:11px;padding:2px 8px">✏️ Edit</span>` : ""}
+              <span class="serif pub-name">${esc(pub.name)}</span>
+              ${isAdmin ? `<span class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}" style="font-size:11px;padding:2px 8px;cursor:pointer">✏️ Edit</span>` : ""}
             </div>
             <div class="pub-meta">
-              ${pub.area ? pub.area : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDate(pub.date) : ""}${pub.chosenBy ? " · Chosen by " + pub.chosenBy : ""}
+              ${pub.area ? esc(pub.area) : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDate(pub.date) : ""}${pub.chosenBy ? " · Chosen by " + esc(pub.chosenBy) : ""}
             </div>
           </div>
           <div style="text-align:right">
             ${avg ? `<div class="serif pub-score">${avg.toFixed(1)}</div>` : '<span style="color:var(--text-dim);font-size:13px">Unrated</span>'}
-            <div class="pub-raters">${raters.length > 0 ? raters.join(", ") : "No ratings yet"}</div>
+            <div class="pub-raters">${raters.length > 0 ? raters.map(r => esc(r)).join(", ") : "No ratings yet"}</div>
           </div>
         </div>
         ${avg ? `<div class="pub-cats">${CATEGORIES.map((cat) => {
@@ -629,16 +686,16 @@ function renderPubDetail() {
 
   // Pub info
   html += `<div class="detail-card">
-    <h1 class="serif detail-title">${pub.name}</h1>
+    <h1 class="serif detail-title">${esc(pub.name)}</h1>
     <div class="pub-meta" style="margin-top:6px">
-      ${pub.area ? pub.area : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDate(pub.date, true) : ""}${pub.chosenBy ? " · Chosen by " + pub.chosenBy : ""}
+      ${pub.area ? esc(pub.area) : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDate(pub.date, true) : ""}${pub.chosenBy ? " · Chosen by " + esc(pub.chosenBy) : ""}
     </div>`;
 
   if (avg) {
     html += `<div style="margin-top:20px">
       <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:16px">
         <span class="serif detail-avg">${avg.toFixed(1)}</span>
-        <span style="color:var(--text-muted);font-size:14px">/ 5 overall · ${raters.join(", ")}</span>
+        <span style="color:var(--text-muted);font-size:14px">/ 5 overall · ${raters.map(r => esc(r)).join(", ")}</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px">
         ${CATEGORIES.map((cat) => {
@@ -703,14 +760,14 @@ function renderPubDetail() {
     if (state.editing) {
       html += `<div style="margin-top:4px">
         <label class="form-label">Notes (optional)</label>
-        <textarea class="form-input form-textarea" id="score-comment" placeholder="Best roast potatoes ever, dodgy gravy...">${state.draftComment}</textarea>
+        <textarea class="form-input form-textarea" id="score-comment" placeholder="Best roast potatoes ever, dodgy gravy...">${esc(state.draftComment)}</textarea>
       </div>
       <div style="display:flex;gap:10px;margin-top:4px">
         <button class="btn-primary" data-action="save-scores">Save Scores</button>
         <button class="btn-secondary" data-action="cancel-edit">Cancel</button>
       </div>`;
     } else if (myScores._comment) {
-      html += `<div class="member-comment">"${myScores._comment}"</div>`;
+      html += `<div class="member-comment">"${esc(myScores._comment)}"</div>`;
     }
     html += `</div>`;
   }
@@ -723,15 +780,16 @@ function renderPubDetail() {
   MEMBERS.forEach((m) => {
     const ms = state.scores[pub.id + ":" + m];
     if (!ms) {
-      html += `<div class="member-card"><div class="member-unrated"><span>${m}</span><span>Not yet rated</span></div></div>`;
+      html += `<div class="member-card"><div class="member-unrated"><span>${esc(m)}</span><span>Not yet rated</span></div></div>`;
       return;
     }
-    const mAvg = CATEGORIES.reduce((sum, c) => sum + (ms[c.key] || 0), 0) / CATEGORIES.filter(c => ms[c.key]).length;
+    const mRated = CATEGORIES.filter(c => ms[c.key]).length;
+    const mAvg = mRated > 0 ? CATEGORIES.reduce((sum, c) => sum + (ms[c.key] || 0), 0) / mRated : null;
     html += `<div class="member-card">
       <div class="member-top">
-        <span class="member-name">${m}</span>
+        <span class="member-name">${esc(m)}</span>
         <div style="display:flex;align-items:center;gap:10px">
-          <span class="member-avg serif">${mAvg.toFixed(1)}</span>
+          <span class="member-avg serif">${mAvg !== null ? mAvg.toFixed(1) : "—"}</span>
           ${isAdmin ? `<button class="btn-danger" style="padding:4px 10px;font-size:11px" data-action="delete-score" data-score-key="${pub.id}:${m}">Remove</button>` : ""}
         </div>
       </div>
@@ -741,7 +799,7 @@ function renderPubDetail() {
           return `<div class="pub-cat"><span class="pub-cat-emoji">${cat.emoji}</span><span class="pub-cat-label">${cat.label}</span><span class="pub-cat-score ${scoreColor(v)}">${v || "—"}</span></div>`;
         }).join("")}
       </div>
-      ${ms._comment ? `<div class="member-comment">"${ms._comment}"</div>` : ""}
+      ${ms._comment ? `<div class="member-comment">"${esc(ms._comment)}"</div>` : ""}
     </div>`;
   });
 
@@ -760,7 +818,7 @@ function renderMyScores() {
   if (unscored.length > 0) {
     html += `<div style="margin-bottom:24px"><div class="section-label">Needs your scores</div>`;
     unscored.forEach((pub) => {
-      html += `<button class="unscored-btn" data-action="view-pub" data-pub-id="${pub.id}">${pub.name} <span style="color:var(--accent);font-size:13px">→ Rate now</span></button>`;
+      html += `<button class="unscored-btn" data-action="view-pub" data-pub-id="${pub.id}">${esc(pub.name)} <span style="color:var(--accent);font-size:13px">→ Rate now</span></button>`;
     });
     html += `</div>`;
   }
@@ -769,10 +827,11 @@ function renderMyScores() {
     html += `<div><div class="section-label-muted">Scored</div>`;
     scored.forEach((pub) => {
       const ms = state.scores[pub.id + ":" + state.currentUser];
-      const mAvg = CATEGORIES.reduce((sum, c) => sum + (ms[c.key] || 0), 0) / CATEGORIES.filter(c => ms[c.key]).length;
+      const mRated = CATEGORIES.filter(c => ms[c.key]).length;
+      const mAvg = mRated > 0 ? CATEGORIES.reduce((sum, c) => sum + (ms[c.key] || 0), 0) / mRated : null;
       html += `<button class="scored-btn" data-action="view-pub" data-pub-id="${pub.id}">
-        <span style="color:var(--text);font-size:15px">${pub.name}</span>
-        <span style="color:var(--accent);font-weight:700" class="serif">${mAvg.toFixed(1)}</span>
+        <span style="color:var(--text);font-size:15px">${esc(pub.name)}</span>
+        <span style="color:var(--accent);font-weight:700" class="serif">${mAvg !== null ? mAvg.toFixed(1) : "—"}</span>
       </button>`;
     });
     html += `</div>`;
@@ -794,7 +853,9 @@ function renderModal() {
         <div class="form-group"><label class="form-label">Pub Name</label><input class="form-input" id="pub-name" placeholder="e.g. The Crown & Anchor"></div>
         <div class="form-group"><label class="form-label">Area / Location</label><input class="form-input" id="pub-area" placeholder="e.g. Chiswick, West London"></div>
         <div class="form-group"><label class="form-label">Date of Visit</label><input type="date" class="form-input" id="pub-date" value="${today()}"></div>
+        <div class="form-group"><label class="form-label">Time (for bookings)</label><input type="time" class="form-input" id="pub-time"></div>
         <div class="form-group"><label class="form-label">Chosen by</label><select class="form-input" id="pub-chosen">
+          <option value="">—</option>
           ${MEMBERS.map((m) => `<option value="${m}" ${m === state.currentUser ? "selected" : ""}>${m}</option>`).join("")}
         </select></div>
         <div style="display:flex;gap:10px;margin-top:24px">
@@ -810,10 +871,12 @@ function renderModal() {
     return `<div class="modal-overlay" data-action="close-modal">
       <div class="modal" onclick="event.stopPropagation()">
         <h2 class="serif">Edit Pub Details</h2>
-        <div class="form-group"><label class="form-label">Pub Name</label><input class="form-input" id="edit-name" value="${pub.name || ""}" placeholder="TBD - fill in when decided"></div>
-        <div class="form-group"><label class="form-label">Area / Location</label><input class="form-input" id="edit-area" value="${pub.area || ""}" placeholder="TBD"></div>
+        <div class="form-group"><label class="form-label">Pub Name</label><input class="form-input" id="edit-name" value="${esc(pub.name || "")}" placeholder="TBD - fill in when decided"></div>
+        <div class="form-group"><label class="form-label">Area / Location</label><input class="form-input" id="edit-area" value="${esc(pub.area || "")}" placeholder="TBD"></div>
         <div class="form-group"><label class="form-label">Date of Visit</label><input type="date" class="form-input" id="edit-date" value="${pub.date || ""}"></div>
+        <div class="form-group"><label class="form-label">Time (for bookings)</label><input type="time" class="form-input" id="edit-time" value="${pub.time || ""}"></div>
         <div class="form-group"><label class="form-label">Chosen by</label><select class="form-input" id="edit-chosen">
+          <option value="">—</option>
           ${MEMBERS.map((m) => `<option value="${m}" ${m === pub.chosenBy ? "selected" : ""}>${m}</option>`).join("")}
         </select></div>
         <div style="display:flex;gap:10px;margin-top:24px;flex-wrap:wrap">
@@ -877,6 +940,12 @@ function bindEvents() {
     btn.onclick = (e) => {
       const action = btn.dataset.action;
       
+      if (action === "dismiss-install") {
+        localStorage.setItem("slc-install-dismissed", "1");
+        const banner = document.getElementById("install-banner");
+        if (banner) banner.remove();
+        return;
+      }
       if (action === "logout") logout();
       if (action === "add-pub") openModal("add-pub");
       if (action === "export") openModal("export");
@@ -909,6 +978,7 @@ function bindEvents() {
           name: document.getElementById("pub-name").value.trim(),
           area: document.getElementById("pub-area").value.trim(),
           date: document.getElementById("pub-date").value,
+          time: document.getElementById("pub-time").value,
           chosenBy: document.getElementById("pub-chosen").value,
         });
       }
@@ -919,6 +989,7 @@ function bindEvents() {
           name: document.getElementById("edit-name").value.trim(),
           area: document.getElementById("edit-area").value.trim(),
           date: document.getElementById("edit-date").value,
+          time: document.getElementById("edit-time").value,
           chosenBy: document.getElementById("edit-chosen").value,
         });
       }
@@ -1001,7 +1072,7 @@ function bindEvents() {
             if (notes) scoreData._comment = notes;
 
             if (Object.keys(scoreData).filter(k => k !== "_comment").length > 0) {
-              db.ref("scores/" + pubId + ":" + member).set(scoreData);
+              db.ref("scores/" + pubId + ":" + member).update(scoreData);
               scoreCount++;
             }
           }
