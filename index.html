@@ -652,8 +652,8 @@ function renderLeaderboard() {
             <span style="font-size:13px;color:var(--text-dim);padding:4px 0">Who's in?</span>
             ${MEMBERS.map((m) => {
               const going = state.attendance[pub.id] && state.attendance[pub.id][m];
-              const isMe = m === state.currentUser;
-              return `<span class="attend-pill ${going ? 'going' : ''} ${isMe ? 'me' : ''}" ${isMe ? `data-action="toggle-attend" data-pub-id="${pub.id}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
+              const canToggle = m === state.currentUser || isAdmin;
+              return `<span class="attend-pill ${going ? 'going' : ''} ${canToggle ? 'me' : ''}" ${canToggle ? `data-action="toggle-attend" data-pub-id="${pub.id}" data-member="${esc(m)}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
             }).join("")}
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:10px">
@@ -813,8 +813,8 @@ function renderPubDetail() {
       <div class="attend-row">
         ${MEMBERS.map((m) => {
           const going = state.attendance[pub.id] && state.attendance[pub.id][m];
-          const isMe = m === state.currentUser;
-          return `<span class="attend-pill ${going ? 'going' : ''} ${isMe ? 'me' : ''}" ${isMe ? `data-action="toggle-attend" data-pub-id="${pub.id}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
+          const canToggle = m === state.currentUser || isAdmin;
+          return `<span class="attend-pill ${going ? 'going' : ''} ${canToggle ? 'me' : ''}" ${canToggle ? `data-action="toggle-attend" data-pub-id="${pub.id}" data-member="${esc(m)}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
         }).join("")}
       </div>
     </div>`;
@@ -996,8 +996,9 @@ function bindEvents() {
       }
       if (action === "toggle-attend") {
         const pubId = btn.dataset.pubId;
-        const current = state.attendance[pubId] && state.attendance[pubId][state.currentUser];
-        db.ref("attendance/" + pubId + "/" + state.currentUser).set(current ? null : true);
+        const member = btn.dataset.member || state.currentUser;
+        const current = state.attendance[pubId] && state.attendance[pubId][member];
+        db.ref("attendance/" + pubId + "/" + member).set(current ? null : true);
         return;
       }
       if (action === "logout") logout();
