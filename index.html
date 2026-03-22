@@ -535,7 +535,8 @@ function generateCSV() {
 // Install banner
 const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
 const installDismissed = localStorage.getItem("slc-install-dismissed");
-const showInstallBanner = !isStandalone && !installDismissed && /iPhone|iPad|iPod/.test(navigator.userAgent);
+const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1);
+const showInstallBanner = !isStandalone && !installDismissed && isMobile;
 
 function renderInstallBanner() {
   if (!showInstallBanner) return "";
@@ -558,14 +559,15 @@ function render() {
   if (!state.currentUser) {
     app.innerHTML = renderLogin() + renderInstallBanner();
   } else if (!state.loaded) {
+    app.innerHTML = renderHeader() + renderInstallBanner() + '<div style="text-align:center;padding:80px 20px;color:var(--text-muted)"><div style="font-size:32px;margin-bottom:12px">🍽️</div>Loading...</div>';
     app.innerHTML = renderHeader() + '<div style="text-align:center;padding:80px 20px;color:var(--text-muted)"><div style="font-size:32px;margin-bottom:12px">🍽️</div>Loading...</div>';
     return;
   } else if (state.view === "leaderboard") {
-    app.innerHTML = renderHeader() + renderNav() + '<div class="content">' + renderLeaderboard() + '</div>';
+    app.innerHTML = renderHeader() + renderInstallBanner() + renderNav() + '<div class="content">' + renderLeaderboard() + '</div>';
   } else if (state.view === "pub-detail" && state.selectedPubId) {
-    app.innerHTML = renderHeader() + renderNav() + '<div class="content">' + renderPubDetail() + '</div>';
+    app.innerHTML = renderHeader() + renderInstallBanner() + renderNav() + '<div class="content">' + renderPubDetail() + '</div>';
   } else if (state.view === "my-scores") {
-    app.innerHTML = renderHeader() + renderNav() + '<div class="content">' + renderMyScores() + '</div>';
+    app.innerHTML = renderHeader() + renderInstallBanner() + renderNav() + '<div class="content">' + renderMyScores() + '</div>';
   }
 
   if (state.modal) {
