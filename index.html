@@ -302,7 +302,8 @@ const CATEGORIES = [
 // State
 const urlParams = new URLSearchParams(window.location.search);
 const urlUser = MEMBERS.find((m) => m.toLowerCase() === (urlParams.get("user") || "").toLowerCase());
-const isAdmin = (urlUser || localStorage.getItem("slc-user")) === "Nick";
+const canAdmin = (urlUser || localStorage.getItem("slc-user")) === "Nick";
+let isAdmin = canAdmin;
 
 let state = {
   currentUser: urlUser || localStorage.getItem("slc-user") || null,
@@ -601,7 +602,7 @@ function renderHeader() {
       </div>
       <div class="header-right">
         <span class="header-user">${esc(state.currentUser)}</span>
-        ${isAdmin ? '<span style="background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">ADMIN</span>' : ''}
+        ${canAdmin ? `<span data-action="toggle-admin" style="background:${isAdmin ? 'var(--danger)' : 'var(--border)'};color:${isAdmin ? '#fff' : 'var(--text-dim)'};font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;cursor:pointer">${isAdmin ? 'ADMIN' : 'ADMIN OFF'}</span>` : ''}
         <button class="header-switch" data-action="logout">Switch</button>
       </div>
     </div>`;
@@ -1001,6 +1002,7 @@ function bindEvents() {
         db.ref("attendance/" + pubId + "/" + member).set(current ? null : true);
         return;
       }
+      if (action === "toggle-admin") { isAdmin = !isAdmin; render(); return; }
       if (action === "logout") logout();
       if (action === "add-pub") openModal("add-pub");
       if (action === "export") openModal("export");
