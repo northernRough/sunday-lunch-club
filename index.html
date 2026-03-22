@@ -352,6 +352,11 @@ db.ref("attendance").on("value", (snap) => {
   _attendanceLoaded = true;
   checkLoaded();
   render();
+}, () => {
+  // Permission denied — continue without attendance data
+  _attendanceLoaded = true;
+  checkLoaded();
+  render();
 });
 
 // Helpers
