@@ -623,9 +623,9 @@ function renderLeaderboard() {
             <button class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}">Edit</button>
           </div>
           ${pub.time ? `<div style="margin-top:8px;color:var(--accent);font-size:15px;font-weight:600">🕐 Booked for ${esc(formatTime(pub.time))}</div>` : ""}
-          <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:10px">
+            ${pub.name && pub.name !== "TBD" ? `<a href="https://maps.apple.com/?q=${encodeURIComponent((pub.name || "") + " " + (pub.area || ""))}" target="_blank" rel="noopener" class="edit-btn" style="text-decoration:none;font-size:13px">📍 Directions</a>` : '<span></span>'}
             <span class="upcoming-note" style="margin:0">Scoring opens on the day</span>
-            ${pub.name && pub.name !== "TBD" ? `<a href="https://maps.apple.com/?q=${encodeURIComponent((pub.name || "") + " " + (pub.area || ""))}" target="_blank" rel="noopener" class="edit-btn" style="text-decoration:none;font-size:13px">📍 Directions</a>` : ""}
           </div>
         </div>`;
     });
