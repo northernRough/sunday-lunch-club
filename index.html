@@ -302,7 +302,7 @@ const CATEGORIES = [
 // State
 const urlParams = new URLSearchParams(window.location.search);
 const urlUser = MEMBERS.find((m) => m.toLowerCase() === (urlParams.get("user") || "").toLowerCase());
-const isAdmin = urlParams.get("admin") === "true";
+const isAdmin = urlParams.get("admin") === "true" && (urlUser || localStorage.getItem("slc-user")) === "Nick";
 
 let state = {
   currentUser: urlUser || localStorage.getItem("slc-user") || null,
