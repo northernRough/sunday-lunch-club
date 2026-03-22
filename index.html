@@ -255,6 +255,16 @@
     .attend-pill.tappable { cursor: pointer; border-color: var(--accent-dim); background: var(--accent-glow); }
     .attend-pill.tappable.going { color: var(--accent); font-weight: 600; }
 
+    @keyframes celebrate {
+      0% { transform: translateY(-50%) rotate(0deg) scale(1); }
+      15% { transform: translateY(-50%) rotate(15deg) scale(1.2); }
+      30% { transform: translateY(-50%) rotate(-15deg) scale(1.3); }
+      45% { transform: translateY(-50%) rotate(12deg) scale(1.1); }
+      60% { transform: translateY(-50%) rotate(-10deg) scale(1.25); }
+      75% { transform: translateY(-50%) rotate(8deg) scale(1.15); }
+      100% { transform: translateY(-50%) rotate(0deg) scale(1); }
+    }
+
     .hidden { display: none; }
 
     /* Install banner */
@@ -660,10 +670,12 @@ function renderLeaderboard() {
                 return `<span class="attend-pill ${going ? 'going' : ''} ${canToggle ? 'tappable' : ''}" ${canToggle ? `data-action="toggle-attend" data-pub-id="${pub.id}" data-member="${esc(m)}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
               }).join("")}
             </div>
-            <span style="position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:56px;line-height:1">${(() => {
+            ${(() => {
               const count = MEMBERS.filter(m => state.attendance[pub.id] && state.attendance[pub.id][m]).length;
-              return ["😢", "😶", "🙂", "😊", "😄", "🤩", "😍"][count];
-            })()}</span>
+              const emoji = ["😢", "😶", "🙂", "😊", "😄", "🤩", "😍"][count];
+              const anim = count === 6 ? "animation:celebrate 1.2s ease-in-out infinite;" : "";
+              return `<span style="position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:56px;line-height:1;${anim}">${emoji}</span>`;
+            })()}
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:10px">
             <span class="upcoming-note" style="margin:0">Scoring opens on the day</span>
