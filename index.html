@@ -302,8 +302,8 @@ const CATEGORIES = [
 // State
 const urlParams = new URLSearchParams(window.location.search);
 const urlUser = MEMBERS.find((m) => m.toLowerCase() === (urlParams.get("user") || "").toLowerCase());
-const canAdmin = (urlUser || localStorage.getItem("slc-user")) === "Nick";
-let isAdmin = canAdmin;
+const COUPLES = { Nick: "Denise", Denise: "Nick", Liz: "Martin", Martin: "Liz", Kerrie: "Kevin", Kevin: "Kerrie" };
+let isAdmin = (urlUser || localStorage.getItem("slc-user")) === "Nick";
 
 let state = {
   currentUser: urlUser || localStorage.getItem("slc-user") || null,
@@ -429,6 +429,7 @@ function formatDateWeekday(dateStr) {
 // Actions
 function login(name) {
   state.currentUser = name;
+  isAdmin = name === "Nick";
   localStorage.setItem("slc-user", name);
   render();
 }
@@ -602,8 +603,8 @@ function renderHeader() {
       </div>
       <div class="header-right">
         <span class="header-user">${esc(state.currentUser)}</span>
-        ${canAdmin ? `<span data-action="toggle-admin" style="background:${isAdmin ? 'var(--danger)' : 'var(--border)'};color:${isAdmin ? '#fff' : 'var(--text-dim)'};font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;cursor:pointer">${isAdmin ? 'ADMIN' : 'ADMIN OFF'}</span>` : ''}
-        <button class="header-switch" data-action="logout">Switch</button>
+        ${state.currentUser === "Nick" ? `<span data-action="toggle-admin" style="background:${isAdmin ? 'var(--danger)' : 'var(--border)'};color:${isAdmin ? '#fff' : 'var(--text-dim)'};font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;cursor:pointer">${isAdmin ? 'ADMIN' : 'ADMIN OFF'}</span>` : ''}
+        ${isAdmin ? '<button class="header-switch" data-action="logout">Switch</button>' : `<button class="header-switch" data-action="switch-partner">As ${esc(COUPLES[state.currentUser])}</button>`}
       </div>
     </div>`;
 }
@@ -1003,6 +1004,7 @@ function bindEvents() {
         return;
       }
       if (action === "toggle-admin") { isAdmin = !isAdmin; render(); return; }
+      if (action === "switch-partner") { login(COUPLES[state.currentUser]); return; }
       if (action === "logout") logout();
       if (action === "add-pub") openModal("add-pub");
       if (action === "export") openModal("export");
