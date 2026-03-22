@@ -331,24 +331,26 @@ if (state.currentUser && !MEMBERS.includes(state.currentUser)) {
 
 // Firebase listeners
 let _pubsLoaded = false, _scoresLoaded = false, _attendanceLoaded = false;
+function checkLoaded() { state.loaded = _pubsLoaded && _scoresLoaded && _attendanceLoaded; }
+
 db.ref("pubs").on("value", (snap) => {
   state.pubs = snap.val() || {};
   _pubsLoaded = true;
-  if (_scoresLoaded && _attendanceLoaded) state.loaded = true;
+  checkLoaded();
   render();
 });
 
 db.ref("scores").on("value", (snap) => {
   state.scores = snap.val() || {};
   _scoresLoaded = true;
-  if (_pubsLoaded && _attendanceLoaded) state.loaded = true;
+  checkLoaded();
   render();
 });
 
 db.ref("attendance").on("value", (snap) => {
   state.attendance = snap.val() || {};
   _attendanceLoaded = true;
-  if (_pubsLoaded && _scoresLoaded) state.loaded = true;
+  checkLoaded();
   render();
 });
 
