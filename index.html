@@ -660,7 +660,7 @@ function renderLeaderboard() {
             }).join("")}
             <span style="font-size:18px">${(() => {
               const count = MEMBERS.filter(m => state.attendance[pub.id] && state.attendance[pub.id][m]).length;
-              return ["", "😶", "🙂", "😊", "😄", "🤩", "🎆"][count] || "";
+              return ["😢", "😶", "🙂", "😊", "😄", "🤩", "🎆"][count];
             })()}</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:10px">
