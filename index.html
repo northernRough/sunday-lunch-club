@@ -246,6 +246,14 @@
     .empty-state h2 { color: var(--accent); margin: 0 0 8px; }
     .empty-state p { color: var(--text-muted); font-size: 15px; }
 
+    .attend-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .attend-pill {
+      font-size: 13px; padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-muted); cursor: default;
+    }
+    .attend-pill.going { background: var(--accent-glow); border-color: var(--accent-dim); color: var(--accent); font-weight: 600; }
+    .attend-pill.me { cursor: pointer; }
+
     .hidden { display: none; }
 
     /* Install banner */
@@ -300,6 +308,7 @@ let state = {
   currentUser: urlUser || localStorage.getItem("slc-user") || null,
   pubs: {},
   scores: {},
+  attendance: {},
   loaded: false,
   view: "leaderboard",
   selectedPubId: null,
@@ -321,18 +330,25 @@ if (state.currentUser && !MEMBERS.includes(state.currentUser)) {
 }
 
 // Firebase listeners
-let _pubsLoaded = false, _scoresLoaded = false;
+let _pubsLoaded = false, _scoresLoaded = false, _attendanceLoaded = false;
 db.ref("pubs").on("value", (snap) => {
   state.pubs = snap.val() || {};
   _pubsLoaded = true;
-  if (_scoresLoaded) state.loaded = true;
+  if (_scoresLoaded && _attendanceLoaded) state.loaded = true;
   render();
 });
 
 db.ref("scores").on("value", (snap) => {
   state.scores = snap.val() || {};
   _scoresLoaded = true;
-  if (_pubsLoaded) state.loaded = true;
+  if (_pubsLoaded && _attendanceLoaded) state.loaded = true;
+  render();
+});
+
+db.ref("attendance").on("value", (snap) => {
+  state.attendance = snap.val() || {};
+  _attendanceLoaded = true;
+  if (_pubsLoaded && _scoresLoaded) state.loaded = true;
   render();
 });
 
@@ -623,6 +639,14 @@ function renderLeaderboard() {
             <button class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}">Edit</button>
           </div>
           ${pub.time ? `<div style="margin-top:8px;color:var(--accent);font-size:15px;font-weight:600">🕐 Booked for ${esc(formatTime(pub.time))}</div>` : ""}
+          <div class="attend-row">
+            <span style="font-size:13px;color:var(--text-dim);padding:4px 0">Who's in?</span>
+            ${MEMBERS.map((m) => {
+              const going = state.attendance[pub.id] && state.attendance[pub.id][m];
+              const isMe = m === state.currentUser;
+              return `<span class="attend-pill ${going ? 'going' : ''} ${isMe ? 'me' : ''}" ${isMe ? `data-action="toggle-attend" data-pub-id="${pub.id}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
+            }).join("")}
+          </div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:10px">
             <span class="upcoming-note" style="margin:0">Scoring opens on the day</span>
             ${pub.name && pub.name !== "TBD" ? `<a href="https://maps.apple.com/?q=${encodeURIComponent((pub.name || "") + " " + (pub.area || ""))}" target="_blank" rel="noopener" class="edit-btn" style="text-decoration:none;font-size:13px">📍 Directions</a>` : ''}
@@ -944,6 +968,12 @@ function bindEvents() {
         localStorage.setItem("slc-install-dismissed", "1");
         const banner = document.getElementById("install-banner");
         if (banner) banner.remove();
+        return;
+      }
+      if (action === "toggle-attend") {
+        const pubId = btn.dataset.pubId;
+        const current = state.attendance[pubId] && state.attendance[pubId][state.currentUser];
+        db.ref("attendance/" + pubId + "/" + state.currentUser).set(current ? null : true);
         return;
       }
       if (action === "logout") logout();
