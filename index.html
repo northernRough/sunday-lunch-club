@@ -614,7 +614,7 @@ function renderHeader() {
       </div>
       <div class="header-right">
         <span style="color:var(--accent);font-size:14px;font-weight:600">${esc(state.currentUser)}</span>
-        ${state.currentUser === "Nick" ? `<span data-action="toggle-admin" style="background:${isAdmin ? 'var(--danger)' : 'none'};color:${isAdmin ? '#fff' : 'var(--text-dim)'};font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;cursor:pointer">ADMIN</span>` : ''}
+        ${state.currentUser === "Nick" || isAdmin ? `<span data-action="toggle-admin" style="background:${isAdmin ? 'var(--danger)' : 'none'};color:${isAdmin ? '#fff' : 'var(--text-dim)'};font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;cursor:pointer">ADMIN</span>` : ''}
         ${isAdmin ? '<button class="header-switch" data-action="logout">Switch</button>' : `<button class="header-switch" data-action="switch-partner" style="color:var(--text-muted)">As ${esc(COUPLES[state.currentUser])}</button>`}
       </div>
     </div>`;
@@ -679,7 +679,7 @@ function renderLeaderboard() {
               <span style="font-size:13px;color:var(--text-dim);padding:4px 0">Who's in?</span>
               ${MEMBERS.map((m) => {
                 const going = state.attendance[pub.id] && state.attendance[pub.id][m];
-                const canToggle = m === state.currentUser || isAdmin;
+                const canToggle = m === state.currentUser || (isAdmin && state.currentUser === "Nick");
                 return `<span class="attend-pill ${going ? 'going' : ''} ${canToggle ? 'tappable' : ''}" ${canToggle ? `data-action="toggle-attend" data-pub-id="${pub.id}" data-member="${esc(m)}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
               }).join("")}
             </div>
@@ -717,7 +717,7 @@ function renderLeaderboard() {
             <div style="display:flex;align-items:center;gap:8px">
               ${medal ? `<span style="font-size:22px">${medal}</span>` : ""}
               <span class="serif pub-name">${esc(pub.name)}</span>
-              ${isAdmin ? `<span class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}" style="font-size:11px;padding:2px 8px;cursor:pointer">✏️ Edit</span>` : ""}
+              ${isAdmin && state.currentUser === "Nick" ? `<span class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}" style="font-size:11px;padding:2px 8px;cursor:pointer">✏️ Edit</span>` : ""}
             </div>
             <div class="pub-meta">
               ${pub.area ? esc(pub.area) : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDate(pub.date) : ""}${pub.chosenBy ? " · Chosen by " + esc(pub.chosenBy) : ""}
@@ -847,7 +847,7 @@ function renderPubDetail() {
       <div class="attend-row">
         ${MEMBERS.map((m) => {
           const going = state.attendance[pub.id] && state.attendance[pub.id][m];
-          const canToggle = m === state.currentUser || isAdmin;
+          const canToggle = m === state.currentUser || (isAdmin && state.currentUser === "Nick");
           return `<span class="attend-pill ${going ? 'going' : ''} ${canToggle ? 'tappable' : ''}" ${canToggle ? `data-action="toggle-attend" data-pub-id="${pub.id}" data-member="${esc(m)}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
         }).join("")}
       </div>
@@ -872,7 +872,7 @@ function renderPubDetail() {
         <span class="member-name">${esc(m)}</span>
         <div style="display:flex;align-items:center;gap:10px">
           <span class="member-avg serif">${mAvg !== null ? mAvg.toFixed(1) : "—"}</span>
-          ${isAdmin ? `<button class="btn-danger" style="padding:4px 10px;font-size:11px" data-action="delete-score" data-score-key="${pub.id}:${m}">Remove</button>` : ""}
+          ${isAdmin && state.currentUser === "Nick" ? `<button class="btn-danger" style="padding:4px 10px;font-size:11px" data-action="delete-score" data-score-key="${pub.id}:${m}">Remove</button>` : ""}
         </div>
       </div>
       <div class="pub-cats">
