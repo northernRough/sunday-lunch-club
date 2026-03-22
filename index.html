@@ -430,7 +430,7 @@ function formatDateWeekday(dateStr) {
 // Actions
 function login(name) {
   state.currentUser = name;
-  isAdmin = name === "Nick";
+  isAdmin = false;
   localStorage.setItem("slc-user", name);
   render();
 }
