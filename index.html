@@ -651,14 +651,16 @@ function renderLeaderboard() {
             <button class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}">Edit</button>
           </div>
           ${pub.time ? `<div style="margin-top:8px;color:var(--accent);font-size:15px;font-weight:600">🕐 Booked for ${esc(formatTime(pub.time))}</div>` : ""}
-          <div class="attend-row">
-            <span style="font-size:13px;color:var(--text-dim);padding:4px 0">Who's in?</span>
-            ${MEMBERS.map((m) => {
-              const going = state.attendance[pub.id] && state.attendance[pub.id][m];
-              const canToggle = m === state.currentUser || isAdmin;
-              return `<span class="attend-pill ${going ? 'going' : ''} ${canToggle ? 'tappable' : ''}" ${canToggle ? `data-action="toggle-attend" data-pub-id="${pub.id}" data-member="${esc(m)}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
-            }).join("")}
-            <span style="font-size:56px;margin-left:auto">${(() => {
+          <div style="position:relative">
+            <div class="attend-row" style="padding-right:60px">
+              <span style="font-size:13px;color:var(--text-dim);padding:4px 0">Who's in?</span>
+              ${MEMBERS.map((m) => {
+                const going = state.attendance[pub.id] && state.attendance[pub.id][m];
+                const canToggle = m === state.currentUser || isAdmin;
+                return `<span class="attend-pill ${going ? 'going' : ''} ${canToggle ? 'tappable' : ''}" ${canToggle ? `data-action="toggle-attend" data-pub-id="${pub.id}" data-member="${esc(m)}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
+              }).join("")}
+            </div>
+            <span style="position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:56px;line-height:1">${(() => {
               const count = MEMBERS.filter(m => state.attendance[pub.id] && state.attendance[pub.id][m]).length;
               return ["😢", "😶", "🙂", "😊", "😄", "🤩", "😍"][count];
             })()}</span>
