@@ -303,7 +303,7 @@ const CATEGORIES = [
 const urlParams = new URLSearchParams(window.location.search);
 const urlUser = MEMBERS.find((m) => m.toLowerCase() === (urlParams.get("user") || "").toLowerCase());
 const COUPLES = { Nick: "Denise", Denise: "Nick", Liz: "Martin", Martin: "Liz", Kerrie: "Kevin", Kevin: "Kerrie" };
-let isAdmin = (urlUser || localStorage.getItem("slc-user")) === "Nick";
+let isAdmin = false;
 
 let state = {
   currentUser: urlUser || localStorage.getItem("slc-user") || null,
@@ -602,9 +602,9 @@ function renderHeader() {
         <span class="header-title serif">Sunday Lunch Club</span>
       </div>
       <div class="header-right">
-        <span class="header-user">${esc(state.currentUser)}</span>
-        ${state.currentUser === "Nick" ? `<span data-action="toggle-admin" style="background:${isAdmin ? 'var(--danger)' : 'var(--border)'};color:${isAdmin ? '#fff' : 'var(--text-dim)'};font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;cursor:pointer">${isAdmin ? 'ADMIN' : 'ADMIN OFF'}</span>` : ''}
-        ${isAdmin ? '<button class="header-switch" data-action="logout">Switch</button>' : `<button class="header-switch" data-action="switch-partner">As ${esc(COUPLES[state.currentUser])}</button>`}
+        <span style="color:var(--accent);font-size:14px;font-weight:600">${esc(state.currentUser)}</span>
+        ${state.currentUser === "Nick" ? `<span data-action="toggle-admin" style="background:${isAdmin ? 'var(--danger)' : 'none'};color:${isAdmin ? '#fff' : 'var(--text-dim)'};font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;cursor:pointer">ADMIN</span>` : ''}
+        ${isAdmin ? '<button class="header-switch" data-action="logout">Switch</button>' : `<button class="header-switch" data-action="switch-partner" style="color:var(--text-muted)">As ${esc(COUPLES[state.currentUser])}</button>`}
       </div>
     </div>`;
 }
