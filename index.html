@@ -645,6 +645,19 @@ function renderLeaderboard() {
 
   let html = '<div style="padding-top:20px">';
 
+  // Nudge: attended but not scored
+  const unscored = pastPubs.filter(p => {
+    const attended = state.attendance[p.id] && state.attendance[p.id][state.currentUser];
+    const scored = state.scores[p.id + ":" + state.currentUser];
+    return attended && !scored;
+  });
+  if (unscored.length > 0) {
+    html += `<div style="background:var(--accent-glow);border:1px solid var(--accent-dim);border-radius:12px;padding:14px 16px;margin-bottom:20px">
+      <div style="font-size:14px;color:var(--accent);font-weight:600;margin-bottom:8px">🍽️ You were there — how was it?</div>
+      ${unscored.map(p => `<button class="unscored-btn" data-action="view-pub" data-pub-id="${p.id}" style="margin-bottom:4px">${esc(p.name)} <span style="color:var(--accent);font-size:13px">→ Rate now</span></button>`).join("")}
+    </div>`;
+  }
+
   if (futurePubs.length > 0) {
     html += `<h2 class="serif" style="font-size:20px;font-weight:700;margin:0 0 14px">📅 Coming Up</h2>`;
     futurePubs.forEach((pub) => {
