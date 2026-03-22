@@ -806,6 +806,20 @@ function renderPubDetail() {
   }
   html += `</div>`;
 
+  // Who was there (past pubs only)
+  if (!future) {
+    html += `<div class="detail-card">
+      <h3 class="serif" style="font-size:18px;font-weight:700;margin:0 0 12px">Who Was There?</h3>
+      <div class="attend-row">
+        ${MEMBERS.map((m) => {
+          const going = state.attendance[pub.id] && state.attendance[pub.id][m];
+          const isMe = m === state.currentUser;
+          return `<span class="attend-pill ${going ? 'going' : ''} ${isMe ? 'me' : ''}" ${isMe ? `data-action="toggle-attend" data-pub-id="${pub.id}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }
+
   // Everyone's scores
   html += `<div class="detail-card">
     <h3 class="serif" style="font-size:18px;font-weight:700;margin:0 0 16px">Everyone's Scores</h3>`;
@@ -813,7 +827,8 @@ function renderPubDetail() {
   MEMBERS.forEach((m) => {
     const ms = state.scores[pub.id + ":" + m];
     if (!ms) {
-      html += `<div class="member-card"><div class="member-unrated"><span>${esc(m)}</span><span>Not yet rated</span></div></div>`;
+      const attended = state.attendance[pub.id] && state.attendance[pub.id][m];
+      html += `<div class="member-card"><div class="member-unrated"><span>${esc(m)}</span><span>${attended ? 'Not yet rated' : 'Didn\'t lunch this time'}</span></div></div>`;
       return;
     }
     const mRated = CATEGORIES.filter(c => ms[c.key]).length;
