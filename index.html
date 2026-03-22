@@ -251,8 +251,9 @@
       font-size: 13px; padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border);
       background: var(--surface); color: var(--text-muted); cursor: default;
     }
-    .attend-pill.going { background: var(--accent-glow); border-color: var(--accent-dim); color: var(--accent); font-weight: 600; }
-    .attend-pill.me { cursor: pointer; }
+    .attend-pill.going { color: var(--text); font-weight: 500; }
+    .attend-pill.tappable { cursor: pointer; border-color: var(--accent-dim); background: var(--accent-glow); }
+    .attend-pill.tappable.going { color: var(--accent); font-weight: 600; }
 
     .hidden { display: none; }
 
@@ -655,7 +656,7 @@ function renderLeaderboard() {
             ${MEMBERS.map((m) => {
               const going = state.attendance[pub.id] && state.attendance[pub.id][m];
               const canToggle = m === state.currentUser || isAdmin;
-              return `<span class="attend-pill ${going ? 'going' : ''} ${canToggle ? 'me' : ''}" ${canToggle ? `data-action="toggle-attend" data-pub-id="${pub.id}" data-member="${esc(m)}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
+              return `<span class="attend-pill ${going ? 'going' : ''} ${canToggle ? 'tappable' : ''}" ${canToggle ? `data-action="toggle-attend" data-pub-id="${pub.id}" data-member="${esc(m)}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
             }).join("")}
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:10px">
@@ -816,7 +817,7 @@ function renderPubDetail() {
         ${MEMBERS.map((m) => {
           const going = state.attendance[pub.id] && state.attendance[pub.id][m];
           const canToggle = m === state.currentUser || isAdmin;
-          return `<span class="attend-pill ${going ? 'going' : ''} ${canToggle ? 'me' : ''}" ${canToggle ? `data-action="toggle-attend" data-pub-id="${pub.id}" data-member="${esc(m)}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
+          return `<span class="attend-pill ${going ? 'going' : ''} ${canToggle ? 'tappable' : ''}" ${canToggle ? `data-action="toggle-attend" data-pub-id="${pub.id}" data-member="${esc(m)}"` : ""}>${esc(m)}${going ? " ✓" : ""}</span>`;
         }).join("")}
       </div>
     </div>`;
