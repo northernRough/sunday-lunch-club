@@ -548,10 +548,24 @@ function generateCSV() {
 const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
 const installDismissed = localStorage.getItem("slc-install-dismissed");
 const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1);
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent));
+const isIOSSafari = isIOS && /Safari/i.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(navigator.userAgent);
 const showInstallBanner = !isStandalone && !installDismissed && isMobile;
 
 function renderInstallBanner() {
   if (!showInstallBanner) return "";
+  if (isIOS && !isIOSSafari) {
+    return `<div class="install-banner" id="install-banner">
+      <div style="font-size:28px;flex-shrink:0">🧭</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Open in Safari to Install</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.4">
+          Copy this link and open it in Safari to add the app to your Home Screen.
+        </div>
+      </div>
+      <button class="install-banner-close" data-action="dismiss-install">✕</button>
+    </div>`;
+  }
   return `<div class="install-banner" id="install-banner">
     <div style="font-size:28px;flex-shrink:0">📲</div>
     <div style="flex:1">
