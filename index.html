@@ -385,18 +385,70 @@ db.ref("summaries").on("value", (snap) => {
   render();
 });
 
-async function fetchSummary(pubId, pubName, comments) {
+function getChooserStats(chooserName) {
+  if (!chooserName) return null;
+  const chosen = pubList().filter(p => p.chosenBy === chooserName && !isFuture(p));
+  const avgs = chosen.map(p => getPubAverage(p.id)).filter(Boolean);
+  if (avgs.length === 0) return null;
+  return { avg: (avgs.reduce((a, b) => a + b, 0) / avgs.length).toFixed(1), count: avgs.length };
+}
+
+function getPubSummaryPayload(pubId) {
+  const pub = state.pubs[pubId];
+  if (!pub) return null;
+  const comments = MEMBERS.map(m => {
+    const ms = state.scores[pubId + ":" + m];
+    return ms && ms._comment ? { name: m, comment: ms._comment } : null;
+  }).filter(Boolean);
+  if (comments.length === 0) return null;
+  const attendees = MEMBERS.filter(m => state.attendance[pubId] && state.attendance[pubId][m]);
+  return {
+    pubName: pub.name,
+    comments,
+    score: getPubAverage(pubId) ? getPubAverage(pubId).toFixed(1) : null,
+    chosenBy: pub.chosenBy || null,
+    attendance: attendees.length > 0 ? attendees.join(", ") : "unknown",
+    chooserStats: getChooserStats(pub.chosenBy),
+  };
+}
+
+async function fetchSummary(pubId) {
+  const payload = getPubSummaryPayload(pubId);
+  if (!payload) return;
   try {
     const res = await fetch("/api/summarise", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pubName, comments }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (data.summary) {
       db.ref("summaries/" + pubId).set(data.summary);
     }
   } catch (e) { console.error("Summary fetch failed:", e); }
+}
+
+async function regenAllSummaries() {
+  const pubs = pubList().filter(p => !isFuture(p));
+  const payloads = pubs.map(p => {
+    const payload = getPubSummaryPayload(p.id);
+    if (!payload) return null;
+    return { id: p.id, name: p.name, ...payload };
+  }).filter(Boolean);
+  if (payloads.length === 0) return;
+  try {
+    const res = await fetch("/api/summarise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pubs: payloads }),
+    });
+    const data = await res.json();
+    if (data.summaries) {
+      Object.entries(data.summaries).forEach(([id, s]) => {
+        db.ref("summaries/" + id).set(s);
+      });
+    }
+  } catch (e) { console.error("Batch summary failed:", e); }
 }
 
 // Helpers
@@ -549,15 +601,7 @@ function saveScores() {
 
   // Regenerate summary if there's a comment
   if (data._comment) {
-    setTimeout(() => {
-      const pub = state.pubs[pubId];
-      if (!pub) return;
-      const allComments = MEMBERS.map(m => {
-        const ms = state.scores[pubId + ":" + m];
-        return ms && ms._comment ? { name: m, comment: ms._comment } : null;
-      }).filter(Boolean);
-      if (allComments.length > 0) fetchSummary(pubId, pub.name, allComments);
-    }, 500);
+    setTimeout(() => fetchSummary(pubId), 500);
   }
 }
 
@@ -787,6 +831,7 @@ function renderLeaderboard() {
           const v = getCatAverage(pub.id, cat.key);
           return `<div class="pub-cat"><span class="pub-cat-emoji">${cat.emoji}</span><span class="pub-cat-label">${cat.label}</span><span class="pub-cat-score ${scoreColor(v)}">${v ? v.toFixed(1) : "—"}</span></div>`;
         }).join("")}</div>` : ""}
+        ${summaries[pub.id] ? `<div style="margin-top:10px;font-size:13px;color:var(--text-muted);font-style:italic;line-height:1.4">"${esc(summaries[pub.id])}"</div>` : ""}
       </button>`;
   });
 
@@ -863,7 +908,7 @@ function renderPubDetail() {
           </div>
         </details>
       </div>`;
-      if (!summary) fetchSummary(pub.id, pub.name, allComments);
+      if (!summary) fetchSummary(pub.id);
     }
   }
 
@@ -1039,6 +1084,12 @@ function renderSettings() {
       </div>
 
       <div style="border-top:1px solid var(--border);padding-top:16px">
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px">Summaries</div>
+        <button class="btn-primary" data-action="regen-summaries" style="font-size:13px;margin-bottom:8px">💬 Regenerate All Summaries</button>
+        <div style="font-size:12px;color:var(--text-dim)">Uses AI to re-summarise all pub comments with cheeky banter.</div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px">
         <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px">App Control</div>
         <button class="btn-danger" data-action="force-refresh" style="font-size:13px">↻ Force Refresh All Users</button>
       </div>
@@ -1168,6 +1219,15 @@ function bindEvents() {
         } else {
           navigator.clipboard.writeText(url).then(() => { alert("Link copied for " + member); });
         }
+        return;
+      }
+      if (action === "regen-summaries") {
+        btn.textContent = "Regenerating...";
+        btn.disabled = true;
+        regenAllSummaries().then(() => {
+          btn.textContent = "✓ Done!";
+          setTimeout(() => { btn.textContent = "💬 Regenerate All Summaries"; btn.disabled = false; }, 2000);
+        });
         return;
       }
       if (action === "force-refresh") {
