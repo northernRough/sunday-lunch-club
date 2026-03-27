@@ -343,7 +343,14 @@ if (state.currentUser && !MEMBERS.includes(state.currentUser)) {
 
 // Firebase listeners
 let _pubsLoaded = false, _scoresLoaded = false, _attendanceLoaded = false;
-function checkLoaded() { state.loaded = _pubsLoaded && _scoresLoaded && _attendanceLoaded; }
+let _summariesChecked = false;
+function checkLoaded() {
+  state.loaded = _pubsLoaded && _scoresLoaded && _attendanceLoaded;
+  if (state.loaded && !_summariesChecked) {
+    _summariesChecked = true;
+    setTimeout(generateMissingSummaries, 1000);
+  }
+}
 
 db.ref("pubs").on("value", (snap) => {
   state.pubs = snap.val() || {};
@@ -454,6 +461,13 @@ async function regenAllSummaries() {
       });
     }
   } catch (e) { console.error("Batch summary failed:", e); }
+}
+
+function generateMissingSummaries() {
+  const missing = pubList().filter(p => !isFuture(p) && !summaries[p.id] && getPubSummaryPayload(p.id));
+  missing.forEach((p, i) => {
+    setTimeout(() => fetchSummary(p.id), i * 1500);
+  });
 }
 
 // Helpers
