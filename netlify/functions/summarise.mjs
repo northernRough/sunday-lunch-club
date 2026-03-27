@@ -41,21 +41,7 @@ export default async (req) => {
 
   const body = await req.json();
 
-  // Single pub summary
-  if (body.pubName) {
-    const { pubName, comments, score, chosenBy, attendance, chooserStats, style } = body;
-    if (!comments || comments.length === 0) {
-      return Response.json({ summary: "" });
-    }
-    try {
-      const summary = await callHaiku(buildPrompt(pubName, comments, score, chosenBy, attendance, chooserStats, style));
-      return Response.json({ summary });
-    } catch (e) {
-      return Response.json({ error: e.message }, { status: 500 });
-    }
-  }
-
-  // Upcoming pub anticipation
+  // Upcoming pub anticipation (check BEFORE pubName since anticipation also has pubName)
   if (body.type === "anticipation") {
     const { pubName, chosenBy, chooserStats, attending, notAttending, totalMembers, style } = body;
     const tone = style || DEFAULT_STYLE;
@@ -74,6 +60,20 @@ Build excitement if lots are coming. Rib anyone who's not coming for what they'l
 
     try {
       const summary = await callHaiku(prompt);
+      return Response.json({ summary });
+    } catch (e) {
+      return Response.json({ error: e.message }, { status: 500 });
+    }
+  }
+
+  // Single pub summary
+  if (body.pubName) {
+    const { pubName, comments, score, chosenBy, attendance, chooserStats, style } = body;
+    if (!comments || comments.length === 0) {
+      return Response.json({ summary: "" });
+    }
+    try {
+      const summary = await callHaiku(buildPrompt(pubName, comments, score, chosenBy, attendance, chooserStats, style));
       return Response.json({ summary });
     } catch (e) {
       return Response.json({ error: e.message }, { status: 500 });
