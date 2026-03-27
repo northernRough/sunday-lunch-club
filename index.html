@@ -371,6 +371,34 @@ db.ref("attendance").on("value", (snap) => {
   render();
 });
 
+// Force refresh listener
+let _appVersionInitial = true;
+db.ref("appVersion").on("value", (snap) => {
+  if (_appVersionInitial) { _appVersionInitial = false; return; }
+  window.location.reload();
+});
+
+// Summaries cache
+let summaries = {};
+db.ref("summaries").on("value", (snap) => {
+  summaries = snap.val() || {};
+  render();
+});
+
+async function fetchSummary(pubId, pubName, comments) {
+  try {
+    const res = await fetch("/api/summarise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pubName, comments }),
+    });
+    const data = await res.json();
+    if (data.summary) {
+      db.ref("summaries/" + pubId).set(data.summary);
+    }
+  } catch (e) { console.error("Summary fetch failed:", e); }
+}
+
 // Helpers
 function esc(str) {
   const d = document.createElement("div");
@@ -518,6 +546,19 @@ function saveScores() {
   db.ref("scores/" + pubId + ":" + state.currentUser).set(data);
   state.editing = false;
   render();
+
+  // Regenerate summary if there's a comment
+  if (data._comment) {
+    setTimeout(() => {
+      const pub = state.pubs[pubId];
+      if (!pub) return;
+      const allComments = MEMBERS.map(m => {
+        const ms = state.scores[pubId + ":" + m];
+        return ms && ms._comment ? { name: m, comment: ms._comment } : null;
+      }).filter(Boolean);
+      if (allComments.length > 0) fetchSummary(pubId, pub.name, allComments);
+    }, 500);
+  }
 }
 
 function cancelEditing() {
@@ -594,6 +635,8 @@ function render() {
     app.innerHTML = renderHeader() + renderInstallBanner() + renderNav() + '<div class="content">' + renderPubDetail() + '</div>';
   } else if (state.view === "my-scores") {
     app.innerHTML = renderHeader() + renderInstallBanner() + renderNav() + '<div class="content">' + renderMyScores() + '</div>';
+  } else if (state.view === "settings") {
+    app.innerHTML = renderHeader() + renderInstallBanner() + renderNav() + '<div class="content">' + renderSettings() + '</div>';
   }
 
   if (state.modal) {
@@ -629,6 +672,7 @@ function renderHeader() {
         <span style="color:var(--accent);font-size:14px;font-weight:600">${esc(state.currentUser)}</span>
         ${state.currentUser === "Nick" || isAdmin ? `<span data-action="toggle-admin" style="background:${isAdmin ? 'var(--danger)' : 'none'};color:${isAdmin ? '#fff' : 'var(--text-dim)'};font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;cursor:pointer">ADMIN</span>` : ''}
         ${isAdmin ? '<button class="header-switch" data-action="logout">Switch</button>' : `<button class="header-switch" data-action="switch-partner" style="color:var(--text-muted)">As ${esc(COUPLES[state.currentUser])}</button>`}
+        <button data-action="settings" style="background:none;border:none;color:var(--text-muted);font-size:20px;padding:0;cursor:pointer">⚙️</button>
       </div>
     </div>`;
 }
@@ -642,7 +686,6 @@ function renderNav() {
     <div class="nav">
       ${tabs.map((t) => `<button class="nav-tab ${state.view === t.key ? 'active' : ''}" data-nav="${t.key}">${t.label}</button>`).join("")}
       <button class="nav-add" data-action="add-pub">+ Add Pub</button>
-      <button class="nav-export" data-action="export">📥 Export</button>
     </div>`;
 }
 
@@ -769,7 +812,11 @@ function renderPubDetail() {
     <h1 class="serif detail-title">${esc(pub.name)}</h1>
     <div class="pub-meta" style="margin-top:6px">
       ${pub.area ? esc(pub.area) : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDate(pub.date, true) : ""}${pub.chosenBy ? " · Chosen by " + esc(pub.chosenBy) : ""}
-    </div>`;
+    </div>
+    ${!future && pub.name && pub.name !== "TBD" ? `<div style="display:flex;gap:10px;margin-top:14px">
+      <button class="edit-btn" data-action="revisit-pub" data-pub-id="${pub.id}" style="font-size:13px">🔄 Revisit</button>
+      <a href="https://maps.apple.com/?q=${encodeURIComponent((pub.name || "") + " " + (pub.area || ""))}" target="_blank" rel="noopener" class="edit-btn" style="text-decoration:none;font-size:13px">📍 Directions</a>
+    </div>` : ""}`;
 
   if (avg) {
     html += `<div style="margin-top:20px">
@@ -797,6 +844,28 @@ function renderPubDetail() {
     </div>`;
   }
   html += `</div>`;
+
+  // Comment summary
+  if (!future) {
+    const allComments = MEMBERS.map(m => {
+      const ms = state.scores[pub.id + ":" + m];
+      return ms && ms._comment ? { name: m, comment: ms._comment } : null;
+    }).filter(Boolean);
+    if (allComments.length > 0) {
+      const summary = summaries[pub.id];
+      html += `<div class="detail-card">
+        <h3 class="serif" style="font-size:18px;font-weight:700;margin:0 0 8px">💬 The Verdict</h3>
+        ${summary ? `<div style="font-size:15px;color:var(--text);line-height:1.5;font-style:italic">"${esc(summary)}"</div>` : `<div style="font-size:13px;color:var(--text-dim)">Generating summary...</div>`}
+        <details style="margin-top:12px">
+          <summary style="font-size:13px;color:var(--accent);cursor:pointer">What everyone actually said</summary>
+          <div style="margin-top:10px">
+            ${allComments.map(c => `<div style="margin-bottom:8px"><span style="font-size:13px;font-weight:600;color:var(--text)">${esc(c.name)}:</span> <span style="font-size:13px;color:var(--text-muted);font-style:italic">"${esc(c.comment)}"</span></div>`).join("")}
+          </div>
+        </details>
+      </div>`;
+      if (!summary) fetchSummary(pub.id, pub.name, allComments);
+    }
+  }
 
   // My scores
   html += `<div class="detail-card" style="border-color:${state.editing ? 'var(--accent-dim)' : 'var(--border)'}">
@@ -869,7 +938,7 @@ function renderPubDetail() {
 
   // Everyone's scores
   html += `<div class="detail-card">
-    <h3 class="serif" style="font-size:18px;font-weight:700;margin:0 0 16px">Everyone's Scores</h3>`;
+    <h3 class="serif" style="font-size:18px;font-weight:700;margin:0 0 16px">Individual Scores</h3>`;
 
   MEMBERS.forEach((m) => {
     const ms = state.scores[pub.id + ":" + m];
@@ -934,6 +1003,46 @@ function renderMyScores() {
 
   if (scored.length === 0 && unscored.length === 0) {
     html += `<div style="text-align:center;padding:40px 20px;color:var(--text-muted)">No pub visits yet. Add one to get started!</div>`;
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function renderSettings() {
+  const adminPowers = isAdmin && state.currentUser === "Nick";
+  let html = '<div style="padding-top:20px">';
+  html += `<button class="back-btn" data-action="back">← Back</button>`;
+  html += `<h2 class="serif" style="font-size:24px;font-weight:700;margin:0 0 20px">⚙️ Settings</h2>`;
+
+  // Export/Import
+  html += `<div class="detail-card">
+    <h3 class="serif" style="font-size:18px;font-weight:700;margin:0 0 12px">📥 Export / Import</h3>
+    <button class="btn-primary" data-action="export" style="margin-bottom:8px">Export / Import Data</button>
+  </div>`;
+
+  // Admin section
+  if (adminPowers) {
+    html += `<div class="detail-card">
+      <h3 class="serif" style="font-size:18px;font-weight:700;margin:0 0 16px">🔐 Admin Only</h3>
+
+      <div style="margin-bottom:20px">
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px">Send App Link</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Message each member their personalised link.</div>
+        ${MEMBERS.map(m => {
+          const url = "https://sunday-lunch-club.netlify.app/?user=" + m.toLowerCase();
+          return `<button class="scored-btn" data-action="share-link" data-member="${esc(m)}" data-url="${esc(url)}" style="margin-bottom:6px">
+            <span style="color:var(--text);font-size:14px">${esc(m)}</span>
+            <span style="color:var(--accent);font-size:13px">📤 Send</span>
+          </button>`;
+        }).join("")}
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:16px">
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px">App Control</div>
+        <button class="btn-danger" data-action="force-refresh" style="font-size:13px">↻ Force Refresh All Users</button>
+      </div>
+    </div>`;
   }
 
   html += '</div>';
@@ -1050,13 +1159,40 @@ function bindEvents() {
       }
       if (action === "toggle-admin") { isAdmin = !isAdmin; render(); return; }
       if (action === "switch-partner") { login(COUPLES[state.currentUser]); return; }
+      if (action === "settings") { setView("settings"); return; }
+      if (action === "share-link") {
+        const member = btn.dataset.member;
+        const url = btn.dataset.url;
+        if (navigator.share) {
+          navigator.share({ title: "Sunday Lunch Club", text: `Hey ${member}! Here's your Sunday Lunch Club link:`, url: url });
+        } else {
+          navigator.clipboard.writeText(url).then(() => { alert("Link copied for " + member); });
+        }
+        return;
+      }
+      if (action === "force-refresh") {
+        if (confirm("This will reload the app for all users. Continue?")) {
+          db.ref("appVersion").set(Date.now());
+        }
+        return;
+      }
       if (action === "logout") logout();
       if (action === "add-pub") openModal("add-pub");
       if (action === "export") openModal("export");
       if (action === "close-modal") closeModal();
       
       if (action === "view-pub") setView("pub-detail", btn.dataset.pubId);
-      if (action === "back") setView("leaderboard");
+      if (action === "back") { setView("leaderboard"); return; }
+      if (action === "revisit-pub") {
+        e.stopPropagation();
+        const orig = state.pubs[btn.dataset.pubId];
+        if (orig) {
+          const id = db.ref("pubs").push().key;
+          db.ref("pubs/" + id).set({ name: orig.name, area: orig.area || "", date: "", time: "", chosenBy: "" });
+          setView("leaderboard");
+        }
+        return;
+      }
 
       if (action === "edit-pub") {
         e.stopPropagation();
