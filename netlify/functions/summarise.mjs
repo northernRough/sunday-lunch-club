@@ -1,10 +1,8 @@
-const DEFAULT_STYLE = "cheeky comedian, warm but with gentle digs, British humour, pub banter tone";
+const DEFAULT_STYLE = "cheeky pub comedian, warm but with gentle digs, British humour, pub banter tone";
 
 function buildPrompt(pubName, comments, score, chosenBy, attendance, chooserStats, style) {
   const tone = style || DEFAULT_STYLE;
-  return `You're the house comedian for the Sunday Lunch Club — a mixed group of 6 friends (3 couples: Nick & Denise, Liz & Martin, Kerrie & Kevin) who rate pubs for their Sunday roasts. Your style: ${tone}.
-
-IMPORTANT: Use gender-appropriate language. Do NOT use "lads", "mate", or "boys" for the whole group — it's a mixed group of men and women. Use "gang", "crew", "lot", "bunch", "crowd" etc instead.
+  return `You're the house comedian for the Sunday Lunch Club — six mates who rate pubs for their Sunday roasts. Your style: ${tone}.
 
 Write a single punchy, funny summary (max 40 words) for their visit to "${pubName}".
 
