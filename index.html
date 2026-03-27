@@ -773,7 +773,6 @@ function renderLeaderboard() {
             <div style="display:flex;align-items:center;gap:8px">
               ${medal ? `<span style="font-size:22px">${medal}</span>` : ""}
               <span class="serif pub-name">${esc(pub.name)}</span>
-              ${isAdmin && state.currentUser === "Nick" ? `<span class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}" style="font-size:11px;padding:2px 8px;cursor:pointer">✏️ Edit</span>` : ""}
             </div>
             <div class="pub-meta">
               ${pub.area ? esc(pub.area) : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDate(pub.date) : ""}${pub.chosenBy ? " · Chosen by " + esc(pub.chosenBy) : ""}
@@ -813,9 +812,10 @@ function renderPubDetail() {
     <div class="pub-meta" style="margin-top:6px">
       ${pub.area ? esc(pub.area) : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDate(pub.date, true) : ""}${pub.chosenBy ? " · Chosen by " + esc(pub.chosenBy) : ""}
     </div>
-    ${!future && pub.name && pub.name !== "TBD" ? `<div style="display:flex;gap:10px;margin-top:14px">
-      <button class="edit-btn" data-action="revisit-pub" data-pub-id="${pub.id}" style="font-size:13px">🔄 Revisit</button>
-      <a href="https://maps.apple.com/?q=${encodeURIComponent((pub.name || "") + " " + (pub.area || ""))}" target="_blank" rel="noopener" class="edit-btn" style="text-decoration:none;font-size:13px">📍 Directions</a>
+    ${!future ? `<div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+      ${pub.name && pub.name !== "TBD" ? `<button class="edit-btn" data-action="revisit-pub" data-pub-id="${pub.id}" style="font-size:13px">🔄 Revisit</button>
+      <a href="https://maps.apple.com/?q=${encodeURIComponent((pub.name || "") + " " + (pub.area || ""))}" target="_blank" rel="noopener" class="edit-btn" style="text-decoration:none;font-size:13px">📍 Directions</a>` : ""}
+      ${isAdmin && state.currentUser === "Nick" ? `<button class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}" style="font-size:13px">✏️ Edit</button>` : ""}
     </div>` : ""}`;
 
   if (avg) {
