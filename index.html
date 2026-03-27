@@ -392,6 +392,11 @@ db.ref("summaries").on("value", (snap) => {
   summaries = snap.val() || {};
   render();
 }, () => { /* permission denied — summaries not enabled in rules */ });
+let anticipation = {};
+db.ref("anticipation").on("value", (snap) => {
+  anticipation = snap.val() || {};
+  render();
+}, () => { /* permission denied */ });
 db.ref("summaryStyle").on("value", (snap) => {
   summaryStyle = snap.val() || "";
 }, () => { /* permission denied */ });
@@ -463,10 +468,42 @@ async function regenAllSummaries() {
   } catch (e) { console.error("Batch summary failed:", e); }
 }
 
+async function fetchAnticipation(pubId) {
+  const pub = state.pubs[pubId];
+  if (!pub) return;
+  const attending = MEMBERS.filter(m => state.attendance[pubId] && state.attendance[pubId][m]);
+  const notAttending = MEMBERS.filter(m => !(state.attendance[pubId] && state.attendance[pubId][m]));
+  try {
+    const res = await fetch("/api/summarise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "anticipation",
+        pubName: pub.name || null,
+        chosenBy: pub.chosenBy || null,
+        chooserStats: getChooserStats(pub.chosenBy),
+        attending,
+        notAttending,
+        totalMembers: MEMBERS.length,
+        style: summaryStyle || null,
+      }),
+    });
+    const data = await res.json();
+    if (data.summary) {
+      db.ref("anticipation/" + pubId).set(data.summary);
+    }
+  } catch (e) { console.error("Anticipation fetch failed:", e); }
+}
+
 function generateMissingSummaries() {
   const missing = pubList().filter(p => !isFuture(p) && !summaries[p.id] && getPubSummaryPayload(p.id));
   missing.forEach((p, i) => {
     setTimeout(() => fetchSummary(p.id), i * 1500);
+  });
+  // Also generate missing anticipation for upcoming pubs
+  const upcoming = pubList().filter(p => isFuture(p) && !anticipation[p.id]);
+  upcoming.forEach((p, i) => {
+    setTimeout(() => fetchAnticipation(p.id), (missing.length + i) * 1500);
   });
 }
 
@@ -809,6 +846,7 @@ function renderLeaderboard() {
               return `<span style="position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:56px;line-height:1;${anim}">${emoji}</span>`;
             })()}
           </div>
+          ${anticipation[pub.id] ? `<div style="margin-top:10px;font-size:13px;color:var(--text-muted);font-style:italic;line-height:1.4">"${esc(anticipation[pub.id])}"</div>` : ""}
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:10px">
             <span class="upcoming-note" style="margin:0">Scoring opens on the day</span>
             ${pub.name && pub.name !== "TBD" ? `<a href="https://maps.apple.com/?q=${encodeURIComponent((pub.name || "") + " " + (pub.area || ""))}" target="_blank" rel="noopener" class="edit-btn" style="text-decoration:none;font-size:13px">📍 Directions</a>` : ''}
@@ -1232,6 +1270,11 @@ function bindEvents() {
         const member = btn.dataset.member || state.currentUser;
         const current = state.attendance[pubId] && state.attendance[pubId][member];
         db.ref("attendance/" + pubId + "/" + member).set(current ? null : true);
+        // Regen anticipation for upcoming pubs when attendance changes
+        const pub = state.pubs[pubId];
+        if (pub && isFuture(pub)) {
+          setTimeout(() => fetchAnticipation(pubId), 1000);
+        }
         return;
       }
       if (action === "toggle-admin") { isAdmin = !isAdmin; render(); return; }
@@ -1259,9 +1302,15 @@ function bindEvents() {
       if (action === "regen-summaries") {
         btn.textContent = "Regenerating...";
         btn.disabled = true;
+        // Regen both past summaries and upcoming anticipation
+        const regenAnticipation = () => {
+          const upcoming = pubList().filter(p => isFuture(p));
+          upcoming.forEach((p, i) => setTimeout(() => fetchAnticipation(p.id), i * 1500));
+        };
         regenAllSummaries().then(() => {
+          regenAnticipation();
           btn.textContent = "✓ Done!";
-          setTimeout(() => { btn.textContent = "💬 Regenerate All Summaries"; btn.disabled = false; }, 2000);
+          setTimeout(() => { btn.textContent = "💬 Regenerate All"; btn.disabled = false; }, 2000);
         });
         return;
       }

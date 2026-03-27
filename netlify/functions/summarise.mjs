@@ -55,6 +55,31 @@ export default async (req) => {
     }
   }
 
+  // Upcoming pub anticipation
+  if (body.type === "anticipation") {
+    const { pubName, chosenBy, chooserStats, attending, notAttending, totalMembers, style } = body;
+    const tone = style || DEFAULT_STYLE;
+    const prompt = `You're the house comedian for the Sunday Lunch Club — six mates who rate pubs for their Sunday roasts. Your style: ${tone}.
+
+Write a single punchy, funny hype line (max 35 words) building anticipation for an upcoming visit to "${pubName || "a mystery pub (TBD)"}".
+
+Chosen by: ${chosenBy || "not yet decided"}
+${chooserStats ? `${chosenBy}'s track record: average ${chooserStats.avg}/5 across ${chooserStats.count} picks` : ""}
+Confirmed going (${attending.length}/${totalMembers}): ${attending.length > 0 ? attending.join(", ") : "nobody yet"}
+${notAttending.length > 0 ? `Not coming: ${notAttending.join(", ")}` : ""}
+
+${attending.length === totalMembers ? "Everyone's in — full house!" : attending.length === 0 ? "Nobody's confirmed yet — tumbleweed." : `${totalMembers - attending.length} still to confirm.`}
+
+Build excitement if lots are coming. Rib anyone who's not coming for what they'll miss. If the chooser has a great track record, hype it. If their record is dodgy, manage expectations with humour. If the pub is TBD, riff on the mystery. Just the hype line, nothing else.`;
+
+    try {
+      const summary = await callHaiku(prompt);
+      return Response.json({ summary });
+    } catch (e) {
+      return Response.json({ error: e.message }, { status: 500 });
+    }
+  }
+
   // Batch regenerate all summaries
   if (body.pubs) {
     const style = body.style;
