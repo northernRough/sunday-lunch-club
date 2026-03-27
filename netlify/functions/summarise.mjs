@@ -1,16 +1,10 @@
-export default async (req) => {
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+const DEFAULT_STYLE = "cheeky pub comedian, warm but with gentle digs, British humour, pub banter tone";
 
-  const body = await req.json();
+function buildPrompt(pubName, comments, score, chosenBy, attendance, chooserStats, style) {
+  const tone = style || DEFAULT_STYLE;
+  return `You're the house comedian for the Sunday Lunch Club — six mates who rate pubs for their Sunday roasts. Your style: ${tone}.
 
-  // Single pub summary
-  if (body.pubName) {
-    const { pubName, comments, score, chosenBy, attendance, chooserStats } = body;
-    if (!comments || comments.length === 0) {
-      return Response.json({ summary: "" });
-    }
-
-    const prompt = `You're the cheeky house comedian for the Sunday Lunch Club — six mates who rate pubs for their Sunday roasts. Write a single punchy, funny summary (max 40 words) for their visit to "${pubName}".
+Write a single punchy, funny summary (max 40 words) for their visit to "${pubName}".
 
 Overall score: ${score || "unrated"}/5
 Chosen by: ${chosenBy || "unknown"}
@@ -20,67 +14,55 @@ ${chooserStats ? `${chosenBy}'s track record picking pubs: average ${chooserStat
 Their comments:
 ${comments.map(c => `${c.name}: "${c.comment}"`).join("\n")}
 
-Be warm but cheeky. Reference the score. If the chooser picked a belter, give them credit. If it was rough, have a gentle dig. If people didn't turn up, note what they missed (or didn't miss). British humour, pub banter tone. Just the summary text, nothing else.`;
+Reference the score. If the chooser picked a belter, give them credit. If it was rough, have a gentle dig. If people didn't turn up, note what they missed (or didn't miss). Just the summary text, nothing else.`;
+}
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 120,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+async function callHaiku(prompt) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 120,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  return data.content[0].text;
+}
 
-    if (!res.ok) {
-      const err = await res.text();
-      return Response.json({ error: err }, { status: 500 });
+export default async (req) => {
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+
+  const body = await req.json();
+
+  // Single pub summary
+  if (body.pubName) {
+    const { pubName, comments, score, chosenBy, attendance, chooserStats, style } = body;
+    if (!comments || comments.length === 0) {
+      return Response.json({ summary: "" });
     }
-
-    const data = await res.json();
-    return Response.json({ summary: data.content[0].text });
+    try {
+      const summary = await callHaiku(buildPrompt(pubName, comments, score, chosenBy, attendance, chooserStats, style));
+      return Response.json({ summary });
+    } catch (e) {
+      return Response.json({ error: e.message }, { status: 500 });
+    }
   }
 
   // Batch regenerate all summaries
   if (body.pubs) {
+    const style = body.style;
     const results = {};
     for (const pub of body.pubs) {
       if (!pub.comments || pub.comments.length === 0) continue;
       try {
-        const prompt = `You're the cheeky house comedian for the Sunday Lunch Club — six mates who rate pubs for their Sunday roasts. Write a single punchy, funny summary (max 40 words) for their visit to "${pub.name}".
-
-Overall score: ${pub.score || "unrated"}/5
-Chosen by: ${pub.chosenBy || "unknown"}
-Who turned up: ${pub.attendance || "unknown"}
-${pub.chooserStats ? `${pub.chosenBy}'s track record picking pubs: average ${pub.chooserStats.avg}/5 across ${pub.chooserStats.count} picks` : ""}
-
-Their comments:
-${pub.comments.map(c => `${c.name}: "${c.comment}"`).join("\n")}
-
-Be warm but cheeky. Reference the score. If the chooser picked a belter, give them credit. If it was rough, have a gentle dig. If people didn't turn up, note what they missed (or didn't miss). British humour, pub banter tone. Just the summary text, nothing else.`;
-
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 120,
-            messages: [{ role: "user", content: prompt }],
-          }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          results[pub.id] = data.content[0].text;
-        }
+        results[pub.id] = await callHaiku(buildPrompt(pub.name, pub.comments, pub.score, pub.chosenBy, pub.attendance, pub.chooserStats, style));
       } catch (e) { /* skip failed ones */ }
     }
     return Response.json({ summaries: results });

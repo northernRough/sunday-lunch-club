@@ -380,9 +380,13 @@ db.ref("appVersion").on("value", (snap) => {
 
 // Summaries cache
 let summaries = {};
+let summaryStyle = "";
 db.ref("summaries").on("value", (snap) => {
   summaries = snap.val() || {};
   render();
+});
+db.ref("summaryStyle").on("value", (snap) => {
+  summaryStyle = snap.val() || "";
 });
 
 function getChooserStats(chooserName) {
@@ -409,6 +413,7 @@ function getPubSummaryPayload(pubId) {
     chosenBy: pub.chosenBy || null,
     attendance: attendees.length > 0 ? attendees.join(", ") : "unknown",
     chooserStats: getChooserStats(pub.chosenBy),
+    style: summaryStyle || null,
   };
 }
 
@@ -440,7 +445,7 @@ async function regenAllSummaries() {
     const res = await fetch("/api/summarise", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pubs: payloads }),
+      body: JSON.stringify({ pubs: payloads, style: summaryStyle || null }),
     });
     const data = await res.json();
     if (data.summaries) {
@@ -857,7 +862,7 @@ function renderPubDetail() {
     <div class="pub-meta" style="margin-top:6px">
       ${pub.area ? esc(pub.area) : ""}${pub.area && pub.date ? " · " : ""}${pub.date ? formatDate(pub.date, true) : ""}${pub.chosenBy ? " · Chosen by " + esc(pub.chosenBy) : ""}
     </div>
-    ${!future ? `<div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+    ${!future ? `<div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center">
       ${pub.name && pub.name !== "TBD" ? `<button class="edit-btn" data-action="revisit-pub" data-pub-id="${pub.id}" style="font-size:13px">🔄 Revisit</button>
       <a href="https://maps.apple.com/?q=${encodeURIComponent((pub.name || "") + " " + (pub.area || ""))}" target="_blank" rel="noopener" class="edit-btn" style="text-decoration:none;font-size:13px">📍 Directions</a>` : ""}
       ${isAdmin && state.currentUser === "Nick" ? `<button class="edit-btn" data-action="edit-pub" data-pub-id="${pub.id}" style="font-size:13px">✏️ Edit</button>` : ""}
@@ -1085,8 +1090,15 @@ function renderSettings() {
 
       <div style="border-top:1px solid var(--border);padding-top:16px">
         <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px">Summaries</div>
-        <button class="btn-primary" data-action="regen-summaries" style="font-size:13px;margin-bottom:8px">💬 Regenerate All Summaries</button>
-        <div style="font-size:12px;color:var(--text-dim)">Uses AI to re-summarise all pub comments with cheeky banter.</div>
+        <div class="form-group">
+          <label class="form-label">Humour style</label>
+          <textarea class="form-input form-textarea" id="summary-style" placeholder="e.g. cheeky pub comedian, dry wit, over-the-top enthusiastic foodie...">${esc(summaryStyle)}</textarea>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:8px">
+          <button class="btn-secondary" data-action="save-style" style="font-size:13px">Save Style</button>
+          <button class="btn-primary" data-action="regen-summaries" style="font-size:13px">💬 Regenerate All</button>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim)">Change the style then regenerate to update all summaries.</div>
       </div>
 
       <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px">
@@ -1218,6 +1230,15 @@ function bindEvents() {
           navigator.share({ title: "Sunday Lunch Club", text: `Hey ${member}! Here's your Sunday Lunch Club link:`, url: url });
         } else {
           navigator.clipboard.writeText(url).then(() => { alert("Link copied for " + member); });
+        }
+        return;
+      }
+      if (action === "save-style") {
+        const el = document.getElementById("summary-style");
+        if (el) {
+          db.ref("summaryStyle").set(el.value.trim());
+          btn.textContent = "✓ Saved";
+          setTimeout(() => { btn.textContent = "Save Style"; }, 1500);
         }
         return;
       }
