@@ -1,2 +1,14 @@
 [functions]
   directory = "netlify/functions"
+
+# Always revalidate the HTML so a new deploy shows up on the next load
+# instead of being served from a stale browser / home-screen-app cache.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
