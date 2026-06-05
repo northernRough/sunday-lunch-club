@@ -136,6 +136,18 @@
       margin-left: 8px; display: inline-block; vertical-align: middle;
     }
     .upcoming-note { color: var(--text-dim); font-size: 13px; margin-top: 10px; font-style: italic; }
+    .vote-now-btn {
+      background: var(--accent); border: none; border-radius: 8px;
+      padding: 8px 16px; color: var(--bg); font-size: 14px; font-weight: 700;
+      animation: votePulse 1.6s ease-in-out infinite;
+    }
+    .vote-now-banner {
+      background: var(--accent); color: var(--bg); font-size: 13px; font-weight: 700;
+      padding: 8px 12px; border-radius: 10px; margin-bottom: 14px; text-align: center;
+      animation: votePulse 1.6s ease-in-out infinite;
+    }
+    .pub-card.voting-live { border-color: var(--accent); }
+    @keyframes votePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.78; } }
     .edit-btn {
       background: var(--accent-glow); border: 1px solid var(--accent-dim); border-radius: 6px;
       padding: 6px 14px; color: var(--accent); font-size: 13px; flex-shrink: 0;
@@ -308,6 +320,7 @@ const CATEGORIES = [
   { key: "drinks", label: "Drinks & Beer Selection", emoji: "🍺", desc: "Range, quality, well-kept?" },
   { key: "atmosphere", label: "Atmosphere & Setting", emoji: "✨", desc: "Ambience, décor, comfort" },
   { key: "service", label: "Service", emoji: "🤝", desc: "Friendly, attentive, efficient?" },
+  { key: "chat_quality", label: "Chat Quality", emoji: "🗣️", desc: "Banter, conversation, good company" },
 ];
 
 // State
@@ -401,9 +414,18 @@ db.ref("summaryStyle").on("value", (snap) => {
   summaryStyle = snap.val() || "";
 }, () => { /* permission denied */ });
 
+// Re-render every minute so time-based voting windows (opens +30m, leaves "Coming Up" +2h)
+// update live without needing a manual refresh — but never disrupt active editing/typing.
+setInterval(() => {
+  if (!state.currentUser || !state.loaded || state.modal || state.editing) return;
+  const el = document.activeElement;
+  if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")) return;
+  render();
+}, 60 * 1000);
+
 function getChooserStats(chooserName) {
   if (!chooserName) return null;
-  const chosen = pubList().filter(p => p.chosenBy === chooserName && !isFuture(p));
+  const chosen = pubList().filter(p => p.chosenBy === chooserName && isScoringOpen(p));
   const avgs = chosen.map(p => getPubAverage(p.id)).filter(Boolean);
   if (avgs.length === 0) return null;
   return { avg: (avgs.reduce((a, b) => a + b, 0) / avgs.length).toFixed(1), count: avgs.length };
@@ -446,7 +468,7 @@ async function fetchSummary(pubId) {
 }
 
 async function regenAllSummaries() {
-  const pubs = pubList().filter(p => !isFuture(p));
+  const pubs = pubList().filter(p => isScoringOpen(p));
   const payloads = pubs.map(p => {
     const payload = getPubSummaryPayload(p.id);
     if (!payload) return null;
@@ -496,12 +518,12 @@ async function fetchAnticipation(pubId) {
 }
 
 function generateMissingSummaries() {
-  const missing = pubList().filter(p => !isFuture(p) && !summaries[p.id] && getPubSummaryPayload(p.id));
+  const missing = pubList().filter(p => isScoringOpen(p) && !summaries[p.id] && getPubSummaryPayload(p.id));
   missing.forEach((p, i) => {
     setTimeout(() => fetchSummary(p.id), i * 1500);
   });
   // Also generate missing anticipation for upcoming pubs
-  const upcoming = pubList().filter(p => isFuture(p) && !anticipation[p.id]);
+  const upcoming = pubList().filter(p => isPreLunch(p) && !anticipation[p.id]);
   upcoming.forEach((p, i) => {
     setTimeout(() => fetchAnticipation(p.id), (missing.length + i) * 1500);
   });
@@ -545,7 +567,43 @@ function getRaters(pubId) {
   return MEMBERS.filter((m) => state.scores[pubId + ":" + m]);
 }
 
-function isFuture(pub) { return pub.date && pub.date > today(); }
+// Booking start as a Date (date + time, defaulting to noon when no time is set)
+function pubStart(pub) {
+  if (!pub.date) return null;
+  const t = (pub.time && /^\d{1,2}:\d{2}$/.test(pub.time)) ? pub.time : "12:00";
+  const padded = t.length === 4 ? "0" + t : t;
+  return new Date(pub.date + "T" + padded + ":00");
+}
+
+// Voting opens 30 minutes after the booking start time
+function isScoringOpen(pub) {
+  const start = pubStart(pub);
+  if (!start) return true; // no date — treat as always scoreable (legacy behaviour)
+  return Date.now() >= start.getTime() + 30 * 60 * 1000;
+}
+
+// Shown in "Coming Up" until 2 hours after the start time (eases voting while eating)
+function isUpcoming(pub) {
+  const start = pubStart(pub);
+  if (!start) return false;
+  return Date.now() < start.getTime() + 2 * 60 * 60 * 1000;
+}
+
+// Live lunch window: voting is open and we're still inside the 2-hour eating window
+function isVotingLive(pub) { return isScoringOpen(pub) && isUpcoming(pub); }
+
+// Booked but voting not open yet (used for anticipation hype lines)
+function isPreLunch(pub) { return isUpcoming(pub) && !isScoringOpen(pub); }
+
+// Describe when scoring opens for a not-yet-open booking
+function scoringOpensText(pub) {
+  const start = pubStart(pub);
+  if (!start) return "Scoring opens on the day";
+  const opens = new Date(start.getTime() + 30 * 60 * 1000);
+  const sameDay = opens.toISOString().split("T")[0] === today();
+  const timeStr = opens.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true }).replace(/\s/g, "").toLowerCase();
+  return sameDay ? `Voting opens around ${timeStr}` : `Voting opens 30 mins after the ${formatDate(start.toISOString().split("T")[0])} booking`;
+}
 
 function scoreColor(val) {
   if (!val) return "score-none";
@@ -791,8 +849,8 @@ function renderNav() {
 
 function renderLeaderboard() {
   const pubs = pubList();
-  const futurePubs = pubs.filter(isFuture).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  const pastPubs = pubs.filter((p) => !isFuture(p)).sort((a, b) => (getPubAverage(b.id) ?? -1) - (getPubAverage(a.id) ?? -1));
+  const futurePubs = pubs.filter(isUpcoming).sort((a, b) => (pubStart(a)?.getTime() ?? 0) - (pubStart(b)?.getTime() ?? 0));
+  const pastPubs = pubs.filter(isScoringOpen).sort((a, b) => (getPubAverage(b.id) ?? -1) - (getPubAverage(a.id) ?? -1));
 
   if (pubs.length === 0) {
     return `<div class="empty-state"><div style="font-size:48px;margin-bottom:16px">🍺</div>
@@ -848,7 +906,9 @@ function renderLeaderboard() {
           </div>
           ${anticipation[pub.id] ? `<div style="margin-top:10px;font-size:13px;color:var(--text-muted);font-style:italic;line-height:1.4">"${esc(anticipation[pub.id])}"</div>` : ""}
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:10px">
-            <span class="upcoming-note" style="margin:0">Scoring opens on the day</span>
+            ${isVotingLive(pub)
+              ? `<button class="vote-now-btn" data-action="view-pub" data-pub-id="${pub.id}">🗳️ ${state.scores[pub.id + ":" + state.currentUser] ? "Update your score" : "Vote now — how's lunch?"}</button>`
+              : `<span class="upcoming-note" style="margin:0">${esc(scoringOpensText(pub))}</span>`}
             ${pub.name && pub.name !== "TBD" ? `<a href="https://maps.apple.com/?q=${encodeURIComponent((pub.name || "") + " " + (pub.area || ""))}" target="_blank" rel="noopener" class="edit-btn" style="text-decoration:none;font-size:13px">📍 Directions</a>` : ''}
           </div>
         </div>`;
@@ -868,7 +928,8 @@ function renderLeaderboard() {
     const medal = idx === 0 && avg ? "🥇" : idx === 1 && avg ? "🥈" : idx === 2 && avg ? "🥉" : "";
 
     html += `
-      <button class="pub-card" data-action="view-pub" data-pub-id="${pub.id}">
+      <button class="pub-card${isVotingLive(pub) ? ' voting-live' : ''}" data-action="view-pub" data-pub-id="${pub.id}">
+        ${isVotingLive(pub) && !state.scores[pub.id + ":" + state.currentUser] ? `<div class="vote-now-banner">🗳️ Voting's open — tap to rate your lunch</div>` : ""}
         <div class="pub-card-top">
           <div>
             <div style="display:flex;align-items:center;gap:8px">
@@ -901,7 +962,7 @@ function renderPubDetail() {
   if (!pub) return "";
   const avg = getPubAverage(pub.id);
   const raters = getRaters(pub.id);
-  const future = isFuture(pub);
+  const future = !isScoringOpen(pub);
   const myScores = state.scores[pub.id + ":" + state.currentUser] || {};
   const hasMyScores = Object.keys(myScores).filter(k => k !== "_comment").length > 0;
 
@@ -986,7 +1047,7 @@ function renderPubDetail() {
 
   if (future) {
     html += `<div style="color:var(--text-dim);font-size:14px;font-style:italic">
-      Scoring opens on ${formatDate(pub.date, true)}. Enjoy the lunch first!</div>`;
+      ${esc(scoringOpensText(pub))} — about 30 minutes after the booking. Enjoy the lunch first!</div>`;
   }
 
   if (!future && (state.editing || hasMyScores)) {
@@ -1074,7 +1135,7 @@ function renderPubDetail() {
 }
 
 function renderMyScores() {
-  const pubs = pubList().filter((p) => !isFuture(p));
+  const pubs = pubList().filter((p) => isScoringOpen(p));
   const scored = pubs.filter((p) => state.scores[p.id + ":" + state.currentUser]);
   const unscored = pubs.filter((p) => !state.scores[p.id + ":" + state.currentUser]);
 
@@ -1272,7 +1333,7 @@ function bindEvents() {
         db.ref("attendance/" + pubId + "/" + member).set(current ? null : true);
         // Regen anticipation for upcoming pubs when attendance changes
         const pub = state.pubs[pubId];
-        if (pub && isFuture(pub)) {
+        if (pub && isPreLunch(pub)) {
           setTimeout(() => fetchAnticipation(pubId), 1000);
         }
         return;
@@ -1304,7 +1365,7 @@ function bindEvents() {
         btn.disabled = true;
         // Regen both past summaries and upcoming anticipation
         const regenAnticipation = () => {
-          const upcoming = pubList().filter(p => isFuture(p));
+          const upcoming = pubList().filter(p => isPreLunch(p));
           upcoming.forEach((p, i) => setTimeout(() => fetchAnticipation(p.id), i * 1500));
         };
         regenAllSummaries().then(() => {

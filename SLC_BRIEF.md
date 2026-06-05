@@ -43,6 +43,7 @@ scores/
 4. Drinks & Beer Selection (🍺) - Range, quality
 5. Atmosphere & Setting (✨) - Ambience, décor
 6. Service (🤝) - Friendly, attentive, efficient
+7. Chat Quality (🗣️) - Banter, conversation, good company
 
 ## Members
 Nick, Denise, Liz, Martin, Kerrie, Kevin
@@ -55,7 +56,7 @@ Nick, Denise, Liz, Martin, Kerrie, Kevin
 
 ## Key features
 - **Leaderboard:** Pubs ranked by average score across all raters. Medals for top 3.
-- **Upcoming pubs:** Future-dated pubs shown in separate "Coming Up" section. Scoring blocked until the date. Editable and deletable.
+- **Upcoming pubs:** Future bookings shown in a separate "Coming Up" section (with "Who's in?" RSVPs). Voting opens **30 minutes after the booking start time** (booking time defaults to noon if unset). A "Vote now" prompt then appears both on the leaderboard pub card and on the "Coming Up" card. The booking stays in "Coming Up" until **2 hours after the start** so people can vote while still eating. Editable and deletable.
 - **Per-person scoring:** 1-5 stars per category. Unscored categories excluded from averages (not zero). Tap star again to deselect.
 - **Everyone's scores:** Pub detail page shows each member's individual scores with 2-column category layout.
 - **Export/Import:** CSV export (copy to clipboard) and import (paste CSV, merges by pub name + date).
