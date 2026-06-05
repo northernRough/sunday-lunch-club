@@ -575,17 +575,25 @@ function pubStart(pub) {
   return new Date(pub.date + "T" + padded + ":00");
 }
 
+// Does this pub already have any scores?
+function hasScores(pub) {
+  return !!(pub && pub.id && MEMBERS.some((m) => state.scores[pub.id + ":" + m]));
+}
+
 // Voting opens 30 minutes after the booking start time
 function isScoringOpen(pub) {
   const start = pubStart(pub);
-  if (!start) return true; // no date — treat as always scoreable (legacy behaviour)
+  // No date set: it's a TBD plan, not somewhere we've been — so not votable.
+  // (A legacy pub with scores but no date stays scoreable so it still ranks.)
+  if (!start) return hasScores(pub);
   return Date.now() >= start.getTime() + 30 * 60 * 1000;
 }
 
 // Shown in "Coming Up" until 2 hours after the start time (eases voting while eating)
 function isUpcoming(pub) {
   const start = pubStart(pub);
-  if (!start) return false;
+  // No date set: show TBD plans in Coming Up; a scored dateless pub belongs in rankings.
+  if (!start) return !hasScores(pub);
   return Date.now() < start.getTime() + 2 * 60 * 60 * 1000;
 }
 
@@ -598,7 +606,7 @@ function isPreLunch(pub) { return isUpcoming(pub) && !isScoringOpen(pub); }
 // Describe when scoring opens for a not-yet-open booking
 function scoringOpensText(pub) {
   const start = pubStart(pub);
-  if (!start) return "Scoring opens on the day";
+  if (!start) return "Date to be confirmed";
   const opens = new Date(start.getTime() + 30 * 60 * 1000);
   const sameDay = opens.toISOString().split("T")[0] === today();
   const timeStr = opens.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true }).replace(/\s/g, "").toLowerCase();
@@ -1047,7 +1055,9 @@ function renderPubDetail() {
 
   if (future) {
     html += `<div style="color:var(--text-dim);font-size:14px;font-style:italic">
-      ${esc(scoringOpensText(pub))} — about 30 minutes after the booking. Enjoy the lunch first!</div>`;
+      ${pubStart(pub)
+        ? esc(scoringOpensText(pub)) + " — about 30 minutes after the booking. Enjoy the lunch first!"
+        : "Date to be confirmed. Add a date once it's booked — voting opens about 30 minutes after the start."}</div>`;
   }
 
   if (!future && (state.editing || hasMyScores)) {
@@ -1333,7 +1343,7 @@ function bindEvents() {
         db.ref("attendance/" + pubId + "/" + member).set(current ? null : true);
         // Regen anticipation for upcoming pubs when attendance changes
         const pub = state.pubs[pubId];
-        if (pub && isPreLunch(pub)) {
+        if (pub && isPreLunch({ id: pubId, ...pub })) {
           setTimeout(() => fetchAnticipation(pubId), 1000);
         }
         return;
