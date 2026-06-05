@@ -567,10 +567,10 @@ function getRaters(pubId) {
   return MEMBERS.filter((m) => state.scores[pubId + ":" + m]);
 }
 
-// Booking start as a Date (date + time, defaulting to noon when no time is set)
+// Booking start as a Date (date + time, defaulting to 1pm when no time is set)
 function pubStart(pub) {
   if (!pub.date) return null;
-  const t = (pub.time && /^\d{1,2}:\d{2}$/.test(pub.time)) ? pub.time : "12:00";
+  const t = (pub.time && /^\d{1,2}:\d{2}$/.test(pub.time)) ? pub.time : "13:00";
   const padded = t.length === 4 ? "0" + t : t;
   return new Date(pub.date + "T" + padded + ":00");
 }
