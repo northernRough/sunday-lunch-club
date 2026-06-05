@@ -1,6 +1,16 @@
 [functions]
   directory = "netlify/functions"
 
+[build.environment]
+  # The Firebase web config in index.html (apiKey, appId, etc.) is public by
+  # design: it identifies the project and access is controlled by database
+  # security rules, not by keeping the key secret. This static site has no build
+  # step, so the config must live in the client. Turn off the heuristic "smart
+  # detection" that false-positives on the AIza... key, while keeping value-based
+  # scanning ON so a genuinely secret value (e.g. ANTHROPIC_API_KEY) would still
+  # block the build if it ever leaked into the output.
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+
 # Always revalidate the HTML so a new deploy shows up on the next load
 # instead of being served from a stale browser / home-screen-app cache.
 [[headers]]
